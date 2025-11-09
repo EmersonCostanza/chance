@@ -1,5 +1,7 @@
-// API Serverless para testar integração com Gemini AI
+// API Serverless para integração com Gemini AI
 // Endpoint: /api/hello
+
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export default async function handler(req, res) {
   // Habilitar CORS para permitir requisições do frontend
@@ -14,20 +16,38 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Por enquanto, retorna uma resposta simples
-    // Depois vamos integrar com o Gemini AI usando @google/generative-ai
-    const response = {
-      status: 'success',
-      message: 'Bom dia! API Serverless funcionando na Vercel',
-      timestamp: new Date().toISOString(),
-      info: 'Pronto para integração com Gemini AI'
-    };
+    // Verificar se a API Key está configurada
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'GEMINI_API_KEY não configurada no Vercel'
+      });
+    }
 
-    return res.status(200).json(response);
+    // Inicializar o Gemini AI
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+
+    // Gerar conteúdo de teste
+    const prompt = 'Diga "Bom dia! A API do Gemini está funcionando perfeitamente na Vercel!" de forma criativa e alegre.';
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    return res.status(200).json({
+      status: 'success',
+      message: text,
+      timestamp: new Date().toISOString(),
+      model: 'gemini-pro',
+      info: 'Integração com Gemini AI ativa!'
+    });
   } catch (error) {
     return res.status(500).json({
       status: 'error',
-      message: error.message
+      message: error.message,
+      info: 'Erro ao conectar com Gemini AI'
     });
   }
 }
