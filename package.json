@@ -1,0 +1,25 @@
+{
+  "name": "chance",
+  "version": "1.0.0",
+  "description": "API Serverless com integração Gemini AI",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0"
+  },
+  "engines": {
+    "node": ">=18.x"
+  },
+  "keywords": [
+    "serverless",
+    "gemini",
+    "ai",
+    "vercel"
+  ],
+  "author": "Emerson Costanza",
+  "license": "MIT"
+}

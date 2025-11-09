@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chance</title>
+    <title>Chance - API Serverless</title>
     <style>
         body {
             margin: 0;
@@ -15,14 +15,99 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
         .message {
             font-size: 48px;
             color: white;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        .button {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .button:active {
+            transform: translateY(0);
+        }
+        .response {
+            margin-top: 20px;
+            color: white;
+            font-size: 16px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+            text-align: left;
+            max-width: 500px;
+        }
+        .response.show {
+            display: block;
+        }
+        .loading {
+            display: none;
+            color: white;
+            margin-top: 10px;
+        }
+        .loading.show {
+            display: block;
         }
     </style>
 </head>
 <body>
-    <div class="message">Bom dia</div>
+    <div class="container">
+        <div class="message">Bom dia</div>
+        <button class="button" onclick="testAPI()">Testar API Serverless</button>
+        <div class="loading" id="loading">Carregando...</div>
+        <div class="response" id="response"></div>
+    </div>
+
+    <script>
+        async function testAPI() {
+            const loadingEl = document.getElementById('loading');
+            const responseEl = document.getElementById('response');
+            
+            // Mostrar loading
+            loadingEl.classList.add('show');
+            responseEl.classList.remove('show');
+            
+            try {
+                // Chamar a API serverless
+                const response = await fetch('/api/hello');
+                const data = await response.json();
+                
+                // Mostrar resposta
+                responseEl.innerHTML = `
+                    <strong>Status:</strong> ${data.status}<br>
+                    <strong>Mensagem:</strong> ${data.message}<br>
+                    <strong>Info:</strong> ${data.info}<br>
+                    <strong>Timestamp:</strong> ${new Date(data.timestamp).toLocaleString('pt-BR')}
+                `;
+                responseEl.classList.add('show');
+            } catch (error) {
+                responseEl.innerHTML = `<strong>Erro:</strong> ${error.message}`;
+                responseEl.classList.add('show');
+            } finally {
+                loadingEl.classList.remove('show');
+            }
+        }
+    </script>
 </body>
 </html>
