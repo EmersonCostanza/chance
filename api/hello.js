@@ -28,7 +28,7 @@ export default async function handler(req, res) {
 
     // Inicializar o Gemini AI
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     // Gerar conteúdo de teste
     const prompt = 'Diga "Bom dia! A API do Gemini está funcionando perfeitamente na Vercel!" de forma criativa e alegre.';
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       status: 'success',
       message: text,
       timestamp: new Date().toISOString(),
-      model: 'gemini-pro',
+      model: 'gemini-1.5-flash',
       info: 'Integração com Gemini AI ativa!'
     });
   } catch (error) {
