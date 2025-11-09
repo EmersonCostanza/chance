@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     // Inicializar o Gemini AI
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
-      model: 'models/gemini-1.5-flash'
+      model: 'gemini-1.5-flash'
     });
 
     // Gerar conteúdo de teste
