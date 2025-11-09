@@ -29,11 +29,15 @@ export default async function handler(req, res) {
     // Inicializar o Gemini AI
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-flash'
+      model: 'gemini-2.5-flash',
+      generationConfig: {
+        temperature: 0.9,
+        maxOutputTokens: 100, // Limita resposta curta = mais rápido
+      }
     });
 
     // Gerar conteúdo de teste
-    const prompt = 'Diga "Bom dia! A API do Gemini está funcionando perfeitamente na Vercel!" de forma criativa e alegre.';
+    const prompt = 'Responda em uma frase curta: A API do Gemini está funcionando?';
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
