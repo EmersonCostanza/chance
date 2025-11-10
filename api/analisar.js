@@ -123,18 +123,49 @@ RESPONDA EXATAMENTE NESTE FORMATO JSON (sem \`\`\`json, apenas o JSON puro):
     console.log('✅ Prompt preparado');
 
     console.log('🔍 Etapa 5: Inicializando Gemini AI...');
-    // Inicializar Gemini com visão (FORA do loop, como era antes que funcionava)
-    const genAI = new GoogleGenerativeAI(apiKey);
-    console.log('✅ GoogleGenerativeAI inicializado');
     
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-flash',
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 200,
-      }
-    });
-    console.log('✅ Modelo gemini-2.5-flash carregado');
+    // Inicializar Gemini com visão (FORA do loop, como era antes que funcionava)
+    let genAI, model;
+    try {
+      console.log('🔧 Tentando inicializar GoogleGenerativeAI...');
+      genAI = new GoogleGenerativeAI(apiKey);
+      console.log('✅ GoogleGenerativeAI inicializado com sucesso');
+      
+      console.log('🔧 Tentando carregar modelo gemini-2.5-flash...');
+      model = genAI.getGenerativeModel({ 
+        model: 'gemini-2.5-flash',
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 200,
+        }
+      });
+      console.log('✅ Modelo gemini-2.5-flash carregado com sucesso');
+    } catch (initError) {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('❌❌❌ ERRO NA INICIALIZAÇÃO DO GEMINI ❌❌❌');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📛 Tipo do erro:', initError.constructor.name);
+      console.log('📛 Mensagem:', initError.message);
+      console.log('📛 Stack:', initError.stack);
+      console.log('🔑 API Key (primeiros 15 chars):', apiKey.substring(0, 15) + '...');
+      console.log('📊 Tamanho da API Key:', apiKey.length);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      return res.status(503).json({
+        error: `Erro ao inicializar Gemini: ${initError.message}`,
+        resposta: 'ERRO_API_SOBRECARREGADA',
+        tentativas: 0,
+        canhoto_status: "Erro API",
+        assinatura_nome: "Erro API",
+        data_entrega: "Erro",
+        documento_status: "Erro API",
+        recebedor_nome: "Erro API",
+        debug_info: {
+          error_type: initError.constructor.name,
+          api_key_length: apiKey.length
+        }
+      });
+    }
 
     // Sistema de retry com backoff exponencial
     const MAX_RETRIES = 3;
@@ -154,6 +185,11 @@ RESPONDA EXATAMENTE NESTE FORMATO JSON (sem \`\`\`json, apenas o JSON puro):
         }
         
         console.log(`🚀 Tentativa ${tentativa + 1}/${MAX_RETRIES}: Enviando requisição para Gemini API...`);
+        console.log('📊 Parâmetros da requisição:');
+        console.log('  - Prompt length:', prompt.length);
+        console.log('  - Image data length:', imagePart.inlineData.data.length);
+        console.log('  - MIME type:', imagePart.inlineData.mimeType);
+        
         const result = await model.generateContent([prompt, imagePart]);
         console.log('✅ Resposta recebida do Gemini');
         
