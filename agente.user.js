@@ -126,20 +126,21 @@
         
         /* Badge de diagnóstico da IA */
         .diagnostico-ia {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: white;
-            color: #333;
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 13px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            border-left: 4px solid;
-            z-index: 1000;
-            max-width: 300px;
-            line-height: 1.4;
+            position: absolute !important;
+            top: 10px !important;
+            left: 10px !important;
+            background: white !important;
+            color: #333 !important;
+            padding: 12px 16px !important;
+            border-radius: 8px !important;
+            font-weight: bold !important;
+            font-size: 13px !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+            border-left: 4px solid !important;
+            z-index: 99999 !important;
+            max-width: 300px !important;
+            line-height: 1.4 !important;
+            display: block !important;
         }
         
         .diagnostico-ia.ok {
@@ -279,9 +280,27 @@
 
     // ========== LÓGICA PRINCIPAL ==========
     function iniciarAuditoria() {
+        console.log('[Chance Agente] 🔍 Procurando seletor:', SELETORES.CONTAINER_ITEM);
         const itens = document.querySelectorAll(SELETORES.CONTAINER_ITEM);
         
+        console.log('[Chance Agente] 📊 Itens encontrados:', itens.length);
+        
         if (itens.length === 0) {
+            // Tentar seletores alternativos
+            console.log('[Chance Agente] ⚠️ Nenhum item com .row.canhoto encontrado. Tentando alternativas...');
+            
+            const alternativas = [
+                '.canhoto',
+                '[class*="canhoto"]',
+                '.row',
+                'div.row'
+            ];
+            
+            for (const sel of alternativas) {
+                const teste = document.querySelectorAll(sel);
+                console.log(`[Chance Agente] Testando "${sel}": ${teste.length} encontrados`);
+            }
+            
             atualizarStatus('❌ Nenhum item encontrado. Verifique os seletores CSS!');
             return;
         }
@@ -292,6 +311,7 @@
         atualizarStatus(`📊 Analisando ${totalItens} itens...`);
         
         itens.forEach((item, index) => {
+            console.log('[Chance Agente] 🎯 Item', index, ':', item);
             setTimeout(() => processarItem(item, index + 1), index * 1000); // 1s entre cada item
         });
     }
@@ -382,7 +402,12 @@
         });
         
         // Garantir que o item tenha position relative
-        item.style.position = 'relative';
+        if (window.getComputedStyle(item).position === 'static') {
+            item.style.position = 'relative';
+        }
+        
+        console.log('[Chance Agente] 📦 Elemento item:', item);
+        console.log('[Chance Agente] 🎨 Position atual:', window.getComputedStyle(item).position);
         
         switch(codigo) {
             case 'OK': {
@@ -393,11 +418,15 @@
                 // Criar badge de diagnóstico
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia ok';
+                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo">✅ Verificado pela IA</div>
                     <div class="detalhes">Data correta e legível</div>
                 `;
                 item.appendChild(diagnostico);
+                
+                console.log('[Chance Agente] ✅ Badge OK adicionado:', diagnostico);
+                console.log('[Chance Agente] 📍 Badge está visível?', diagnostico.offsetParent !== null);
                 
                 // Não marca nenhum checkbox quando está OK
                 break;
@@ -411,11 +440,14 @@
                 // Criar badge de diagnóstico
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
+                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo">❌ Problema Detectado</div>
                     <div class="detalhes">Data não encontrada ou ilegível na imagem</div>
                 `;
                 item.appendChild(diagnostico);
+                
+                console.log('[Chance Agente] ❌ Badge ERRO adicionado:', diagnostico);
                 
                 if (modoAutomatico) {
                     console.log('[Chance Agente] 📝 Marcando checkbox: Campo em Branco');
@@ -438,11 +470,14 @@
                 // Criar badge de diagnóstico
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
+                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo">❌ Problema na Imagem</div>
                     <div class="detalhes">Imagem com qualidade ruim ou não carregou</div>
                 `;
                 item.appendChild(diagnostico);
+                
+                console.log('[Chance Agente] ❌ Badge ERRO_IMAGEM adicionado');
                 
                 if (modoAutomatico) {
                     console.log('[Chance Agente] 📝 Marcando checkbox: Problema na Imagem');
@@ -509,12 +544,15 @@
                 // Criar badge de diagnóstico
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia alerta';
+                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo">⚠️ Data Divergente</div>
                     <div class="detalhes">Sistema: ${item.querySelector(SELETORES.DATA_BAIXA)?.innerText || 'N/A'}<br>
                     Imagem: ${valor}${diasTexto}</div>
                 `;
                 item.appendChild(diagnostico);
+                
+                console.log('[Chance Agente] ⚠️ Badge DATA_DIVERGENTE adicionado');
                 
                 break;
             }
@@ -525,6 +563,7 @@
                 // Criar badge de diagnóstico para erro desconhecido
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
+                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo">❓ Resposta Inesperada</div>
                     <div class="detalhes">Código: ${codigo}</div>
@@ -532,6 +571,18 @@
                 item.appendChild(diagnostico);
                 break;
             }
+        }
+        
+        // Verificar se o badge foi realmente adicionado
+        const badgeAdicionado = item.querySelector('.diagnostico-ia');
+        console.log('[Chance Agente] 🔍 Badge encontrado após adicionar:', badgeAdicionado);
+        if (badgeAdicionado) {
+            console.log('[Chance Agente] 📏 Dimensões do badge:', {
+                width: badgeAdicionado.offsetWidth,
+                height: badgeAdicionado.offsetHeight,
+                top: badgeAdicionado.offsetTop,
+                left: badgeAdicionado.offsetLeft
+            });
         }
     }
     
