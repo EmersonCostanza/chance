@@ -268,12 +268,6 @@
             border: 2px solid #ff0000;
         }
         
-        #resumo-auditoria .stats {
-            margin-top: 10px;
-            font-size: 12px;
-            color: #666;
-            text-align: center;
-        }
     `);
 
     // ========== VARIÁVEIS GLOBAIS ==========
@@ -397,12 +391,6 @@
         
         // Limpar resultados anteriores
         resultadosAuditoria = [];
-        
-        // Remover resumo anterior se existir
-        const resumoAntigo = document.getElementById('resumo-auditoria');
-        if (resumoAntigo) {
-            resumoAntigo.remove();
-        }
         
         const itens = document.querySelectorAll(SELETORES.CONTAINER_ITEM);
         
@@ -866,101 +854,10 @@
         if (itensProcessados === totalItens) {
             atualizarStatus(`✅ Auditoria concluída! ${totalItens} itens analisados.`);
             
-            // Criar resumo da auditoria
-            criarResumoAuditoria();
-            
             if (GM_getValue('gravarAuto', false)) {
                 setTimeout(() => clicarGravarTodos(), 2000);
             }
         }
-    }
-    
-    function criarResumoAuditoria() {
-        console.log('[Chance Agente] 📊 Criando resumo da auditoria...');
-        
-        // Contar resultados
-        const totalOK = resultadosAuditoria.filter(r => r.codigo === 'OK').length;
-        const totalErros = resultadosAuditoria.filter(r => r.codigo !== 'OK').length;
-        
-        // Contar por tipo
-        const contadores = {
-            dataBaixaOk: 0,
-            assinaturaOk: 0,
-            imagemOk: 0,
-            erros: []
-        };
-        
-        resultadosAuditoria.forEach(r => {
-            if (r.codigo === 'OK') {
-                contadores.dataBaixaOk++;
-                contadores.assinaturaOk++;
-                contadores.imagemOk++;
-            } else {
-                if (r.codigo === 'ERRO_DADOS') {
-                    contadores.erros.push('Campos em branco ou ilegíveis detectados');
-                } else if (r.codigo === 'ERRO_IMAGEM') {
-                    contadores.imagemOk = Math.max(0, contadores.imagemOk - 1);
-                    contadores.erros.push('Problemas nas imagens detectados');
-                } else if (r.codigo === 'DATA_DIVERGENTE') {
-                    contadores.dataBaixaOk = Math.max(0, contadores.dataBaixaOk - 1);
-                    contadores.erros.push(`Data divergente: ${r.valor}`);
-                }
-            }
-        });
-        
-        // Criar elemento do resumo
-        const resumo = document.createElement('div');
-        resumo.id = 'resumo-auditoria';
-        
-        let checklistHTML = `
-            <div class="checklist-item">
-                <span class="check-icon">${contadores.dataBaixaOk === totalItens ? '✅' : '⚠️'}</span>
-                <span>Data de Baixa: ${contadores.dataBaixaOk}/${totalItens} OK</span>
-            </div>
-            <div class="checklist-item">
-                <span class="check-icon">${contadores.assinaturaOk === totalItens ? '✅' : '⚠️'}</span>
-                <span>Assinatura: ${contadores.assinaturaOk}/${totalItens} OK</span>
-            </div>
-            <div class="checklist-item">
-                <span class="check-icon">${contadores.imagemOk === totalItens ? '✅' : '⚠️'}</span>
-                <span>Imagem do Canhoto: ${contadores.imagemOk}/${totalItens} OK</span>
-            </div>
-        `;
-        
-        let resultadoFinal = '';
-        if (totalErros === 0) {
-            resultadoFinal = `
-                <div class="resultado-final sucesso">
-                    ✅ Resultado: OK, pode gravar!
-                </div>
-            `;
-        } else {
-            const checkboxesMarcados = resultadosAuditoria
-                .filter(r => r.checkboxMarcado && r.checkboxMarcado !== 'Nenhum (aprovado)')
-                .map(r => r.checkboxMarcado)
-                .filter((v, i, a) => a.indexOf(v) === i); // Remove duplicados
-            
-            resultadoFinal = `
-                <div class="resultado-final erro">
-                    ❌ Resultado: ${totalErros} ${totalErros === 1 ? 'erro detectado' : 'erros detectados'}<br>
-                    <small style="font-size: 11px; font-weight: normal; margin-top: 5px; display: block;">
-                        ${checkboxesMarcados.join(', ')}
-                    </small>
-                </div>
-            `;
-        }
-        
-        resumo.innerHTML = `
-            <h4>📋 Resumo da Auditoria</h4>
-            ${checklistHTML}
-            ${resultadoFinal}
-            <div class="stats">
-                Analisados: ${totalItens} itens | Sucesso: ${totalOK} | Erros: ${totalErros}
-            </div>
-        `;
-        
-        document.body.appendChild(resumo);
-        console.log('[Chance Agente] ✅ Resumo criado com sucesso');
     }
 
     function clicarGravarTodos() {
