@@ -709,7 +709,7 @@
                     // Adicionar ao painel de logs visual
                     adicionarLogVisual(resultado);
                     
-                    executarAcao(item, resultado.resposta);
+                    executarAcao(item, dataDeBaixa, resultado);
                 } catch (error) {
                     console.error('[Chance Agente] ❌ Erro ao processar resposta:', error);
                     console.error('[Chance Agente] 📄 Conteúdo da resposta que falhou:', response.responseText);
@@ -736,67 +736,80 @@
         });
     }
 
-    function executarAcao(item, respostaIA) {
+    function executarAcao(item, dataDeBaixa, analiseIA) {
         item.classList.remove('auditoria-processando');
         
         // ============ LOGS DETALHADOS DO PROCESSAMENTO ============
         console.log('╔═══════════════════════════════════════════════════════╗');
-        console.log('║         PROCESSANDO RESPOSTA DA IA                    ║');
+        console.log('║         PROCESSANDO ANÁLISE DA IA                     ║');
         console.log('╚═══════════════════════════════════════════════════════╝');
-        console.log('📨 Resposta recebida (raw):', respostaIA);
-        console.log('📏 Tipo de dado:', typeof respostaIA);
-        console.log('📏 Tamanho:', respostaIA?.length);
-        console.log('🔤 String completa entre aspas:', `"${respostaIA}"`);
+        console.log('� Data do Sistema:', dataDeBaixa);
+        console.log('� Análise:', analiseIA);
         
         const modoAutomatico = GM_getValue('gravarAuto', false);
         
-        // Normalizar resposta da IA (remover quebras de linha, espaços extras, etc)
-        const respostaNormalizada = respostaIA.replace(/\n/g, ' ').trim().toUpperCase();
+        // Verificar cada campo da análise
+        const canhotoslegivel = analiseIA.canhoto_status && analiseIA.canhoto_status.toLowerCase() === 'legivel';
+        const temAssinatura = analiseIA.assinatura_nome && analiseIA.assinatura_nome.toLowerCase() !== 'ilegivel';
+        const temDocumento = analiseIA.documento_status && analiseIA.documento_status.toLowerCase() === 'ok';
+        const temRecebedor = analiseIA.recebedor_nome && analiseIA.recebedor_nome.toLowerCase() !== 'sem nome';
+        const dataEntrega = analiseIA.data_entrega || '';
         
-        console.log('🔄 Após normalização:', respostaNormalizada);
-        console.log('🔤 Normalizada entre aspas:', `"${respostaNormalizada}"`);
-        console.log('📏 Tamanho normalizado:', respostaNormalizada.length);
+        console.log('[Chance Agente] 🔍 Validações:');
+        console.log('  - Canhoto legível:', canhotoslegivel);
+        console.log('  - Tem assinatura:', temAssinatura);
+        console.log('  - Tem documento:', temDocumento);
+        console.log('  - Tem recebedor:', temRecebedor);
+        console.log('  - Data entrega:', dataEntrega);
         
-        // Tentar identificar o código da resposta
-        let codigo = '';
-        let valor = '';
+        // Comparar data do sistema com data de entrega
+        let datasIguais = false;
+        let diasDiferenca = 0;
         
-        if (respostaNormalizada.includes('DATA_DIVERGENTE') || respostaNormalizada.includes('DATA DIVERGENTE')) {
-            codigo = 'DATA_DIVERGENTE';
-            // Extrair a data da resposta
-            const matchData = respostaNormalizada.match(/(\d{2}\/\d{2}\/\d{4})/);
-            if (matchData) {
-                valor = matchData[1];
-            }
-        } else if (respostaNormalizada === 'OK' || respostaNormalizada.startsWith('OK')) {
-            codigo = 'OK';
-        } else if (respostaNormalizada.includes('ERRO_DADOS') || respostaNormalizada.includes('ERRO DADOS')) {
-            codigo = 'ERRO_DADOS';
-        } else if (respostaNormalizada.includes('ERRO_IMAGEM') || respostaNormalizada.includes('ERRO IMAGEM')) {
-            codigo = 'ERRO_IMAGEM';
-        } else {
-            // Se não conseguiu identificar, usar a primeira palavra
-            const partes = respostaNormalizada.split(/[\s:]/);
-            codigo = partes[0] || respostaNormalizada;
+        if (dataEntrega && dataEntrega !== 'Erro') {
+            const dataSistema = parseDataBrasileira(dataDeBaixa);
+            const dataImagem = parseDataBrasileira(dataEntrega);
             
-            // Tentar extrair data de qualquer lugar
-            const matchData = respostaNormalizada.match(/(\d{2}\/\d{2}\/\d{4})/);
-            if (matchData) {
-                valor = matchData[1];
-                codigo = 'DATA_DIVERGENTE';
+            if (dataSistema && dataImagem) {
+                const diffTime = Math.abs(dataImagem - dataSistema);
+                diasDiferenca = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                datasIguais = (diasDiferenca === 0);
+                
+                console.log('[Chance Agente] 📅 Comparação de datas:', {
+                    dataSistema: dataDeBaixa,
+                    dataImagem: dataEntrega,
+                    diasDiferenca: diasDiferenca,
+                    datasIguais: datasIguais
+                });
             }
         }
         
-        console.log('[Chance Agente] 🎯 Código identificado:', codigo);
-        console.log('[Chance Agente] 🎯 Valor extraído:', valor);
+        // Determinar o código de status baseado na análise
+        let codigo = '';
+        
+        if (!canhotoslegivel) {
+            codigo = 'SEM_CANHOTO';
+        } else if (!datasIguais && dataEntrega !== 'Erro') {
+            codigo = 'DATA_DIVERGENTE';
+        } else if (!temAssinatura || !temRecebedor) {
+            codigo = 'ERRO_DADOS';
+        } else if (canhotoslegivel && datasIguais && temAssinatura && temRecebedor) {
+            codigo = 'OK';
+        } else {
+            codigo = 'ERRO_DADOS';
+        }
+        
+        console.log('[Chance Agente] 🎯 Código final identificado:', codigo);
         console.log('[Chance Agente] 🎯 Modo automático:', modoAutomatico);
         console.log('═══════════════════════════════════════════════════════');
         
         // Armazenar resultado da auditoria
         const resultado = {
-            dataBaixa: item.querySelector(SELETORES.DATA_BAIXA)?.innerText || 'N/A',
+            dataBaixa: dataDeBaixa,
             codigo: codigo,
-            valor: valor,
+            analise: analiseIA,
+            datasIguais: datasIguais,
+            diasDiferenca: diasDiferenca,
             checkboxMarcado: null
         };
         
@@ -819,15 +832,23 @@
                     <div class="checklist">
                         <div class="checklist-item">
                             <span class="icon">✅</span>
-                            <span>Data de Baixa: OK</span>
+                            <span>Data: ${analiseIA.data_entrega} (OK)</span>
                         </div>
                         <div class="checklist-item">
                             <span class="icon">✅</span>
-                            <span>Assinatura: OK</span>
+                            <span>Assinatura: ${analiseIA.assinatura_nome}</span>
                         </div>
                         <div class="checklist-item">
                             <span class="icon">✅</span>
-                            <span>Imagem do Canhoto: OK</span>
+                            <span>Recebedor: ${analiseIA.recebedor_nome}</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">✅</span>
+                            <span>Canhoto: ${analiseIA.canhoto_status}</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">✅</span>
+                            <span>Documento: ${analiseIA.documento_status}</span>
                         </div>
                     </div>
                     <div class="resultado" style="color: #006600;">
@@ -857,20 +878,28 @@
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
                         <div class="checklist-item">
-                            <span class="icon">❌</span>
-                            <span>Data de Baixa: Ilegível/Ausente</span>
+                            <span class="icon">${analiseIA.data_entrega !== 'Erro' ? '✅' : '❌'}</span>
+                            <span>Data: ${analiseIA.data_entrega}</span>
                         </div>
                         <div class="checklist-item">
-                            <span class="icon">❌</span>
-                            <span>Assinatura: Ilegível/Ausente</span>
+                            <span class="icon">${analiseIA.assinatura_nome !== 'Ilegivel' ? '✅' : '❌'}</span>
+                            <span>Assinatura: ${analiseIA.assinatura_nome}</span>
                         </div>
                         <div class="checklist-item">
-                            <span class="icon">⚠️</span>
-                            <span>Imagem do Canhoto: Legível</span>
+                            <span class="icon">${analiseIA.recebedor_nome !== 'Sem nome' ? '✅' : '❌'}</span>
+                            <span>Recebedor: ${analiseIA.recebedor_nome}</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">${analiseIA.canhoto_status === 'Legivel' ? '✅' : '❌'}</span>
+                            <span>Canhoto: ${analiseIA.canhoto_status}</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">${analiseIA.documento_status === 'ok' ? '✅' : '❌'}</span>
+                            <span>Documento: ${analiseIA.documento_status}</span>
                         </div>
                     </div>
                     <div class="resultado" style="color: #cc0000;">
-                        ❌ Resultado: Erro detectado
+                        ❌ Resultado: Dados ilegíveis ou ausentes
                     </div>
                     <div class="checkbox-info">
                         ${modoAutomatico ? '✓ Campo em Branco selecionado' : 'Campo em Branco (não marcado)'}
@@ -894,107 +923,32 @@
                 }
                 break;
             }
-            
-            case 'ERRO_IMAGEM': {
-                // Marcar checkbox de problema na imagem
-                console.log('[Chance Agente] ⚠️ Erro detectado: Problema na qualidade/visualização da imagem');
-                item.classList.add('auditoria-item-erro');
-                
-                // Criar badge de diagnóstico com checklist
-                const diagnostico = document.createElement('div');
-                diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.innerHTML = `
-                    <div class="titulo-badge">🤖 Auditoria da IA</div>
-                    <div class="checklist">
-                        <div class="checklist-item">
-                            <span class="icon">⚠️</span>
-                            <span>Data de Baixa: Não verificável</span>
-                        </div>
-                        <div class="checklist-item">
-                            <span class="icon">⚠️</span>
-                            <span>Assinatura: Não verificável</span>
-                        </div>
-                        <div class="checklist-item">
-                            <span class="icon">❌</span>
-                            <span>Imagem do Canhoto: Erro</span>
-                        </div>
-                    </div>
-                    <div class="resultado" style="color: #cc0000;">
-                        ❌ Resultado: Problema na imagem
-                    </div>
-                    <div class="checkbox-info">
-                        ${modoAutomatico ? '✓ Problema na imagem selecionado' : 'Problema na imagem (não marcado)'}
-                    </div>
-                `;
-                item.appendChild(diagnostico);
-                
-                console.log('[Chance Agente] ❌ Badge ERRO_IMAGEM adicionado');
-                
-                if (modoAutomatico) {
-                    console.log('[Chance Agente] 📝 Marcando checkbox: Problema na Imagem');
-                    const checkboxImagem = item.querySelector(SELETORES.CHECKBOX_PROBLEMA_IMAGEM);
-                    if (checkboxImagem) {
-                        checkboxImagem.click();
-                        resultado.checkboxMarcado = 'Problema na Imagem';
-                    }
-                } else {
-                    console.log('[Chance Agente] ℹ️ Modo automático desativado - checkbox não será marcado');
-                    resultado.checkboxMarcado = 'Problema na Imagem (não marcado - modo manual)';
-                }
-                break;
-            }
                 
             case 'DATA_DIVERGENTE': {
-                // Marcar data divergente e calcular dias
-                console.log('[Chance Agente] ⚠️ Erro detectado: Data divergente encontrada:', valor);
+                // Marcar data divergente
+                console.log('[Chance Agente] ⚠️ Erro detectado: Data divergente encontrada');
                 item.classList.add('auditoria-item-erro');
                 
-                let diasTexto = '';
-                let diasDiferenca = 0;
-                
-                if (modoAutomatico && valor) {
+                if (modoAutomatico) {
                     const checkboxData = item.querySelector(SELETORES.CHECKBOX_DATA_DIVERGENTE);
                     if (checkboxData) {
                         checkboxData.click();
                         
-                        // Calcular dias de divergência
-                        const spanDataBaixa = item.querySelector(SELETORES.DATA_BAIXA);
+                        // Inserir quantidade de dias no span
                         const spanDiasDivergencia = item.querySelector(SELETORES.SPAN_DIAS_DIVERGENCIA);
-                        
-                        if (spanDataBaixa && spanDiasDivergencia) {
-                            const dataBaixa = parseDataBrasileira(spanDataBaixa.innerText.trim());
-                            const dataLida = parseDataBrasileira(valor);
-                            
-                            if (dataBaixa && dataLida) {
-                                const diffTime = Math.abs(dataLida - dataBaixa);
-                                diasDiferenca = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                                
-                                console.log('[Chance Agente] 📅 Cálculo de divergência:', {
-                                    dataSistema: spanDataBaixa.innerText.trim(),
-                                    dataImagem: valor,
-                                    diasDiferenca: diasDiferenca
-                                });
-                                
-                                // Inserir quantidade de dias no span
-                                spanDiasDivergencia.textContent = diasDiferenca;
-                                spanDiasDivergencia.style.display = '';
-                                
-                                // Também atualizar o value do checkbox se necessário
-                                checkboxData.value = diasDiferenca;
-                                
-                                diasTexto = ` (${diasDiferenca} ${diasDiferenca === 1 ? 'dia' : 'dias'} de diferença)`;
-                                
-                                console.log('[Chance Agente] 📝 Marcando checkbox: Data Divergente (' + diasDiferenca + ' dias)');
-                                resultado.checkboxMarcado = `Data Divergente (${diasDiferenca} dias)`;
-                            }
+                        if (spanDiasDivergencia) {
+                            spanDiasDivergencia.textContent = diasDiferenca;
+                            spanDiasDivergencia.style.display = '';
                         }
+                        
+                        checkboxData.value = diasDiferenca;
+                        
+                        console.log('[Chance Agente] 📝 Marcando checkbox: Data Divergente (' + diasDiferenca + ' dias)');
+                        resultado.checkboxMarcado = `Data Divergente (${diasDiferenca} dias)`;
                     }
-                } else if (!modoAutomatico) {
+                } else {
                     console.log('[Chance Agente] ℹ️ Modo automático desativado - checkbox não será marcado');
                     resultado.checkboxMarcado = 'Data Divergente (não marcado - modo manual)';
-                } else {
-                    console.log('[Chance Agente] ⚠️ Valor da data não encontrado na resposta');
-                    resultado.checkboxMarcado = 'Data Divergente (erro ao calcular)';
                 }
                 
                 // Criar badge de diagnóstico
@@ -1008,20 +962,25 @@
                             <span>Data de Baixa: Divergente</span>
                         </div>
                         <div class="checklist-item">
-                            <span class="icon">✅</span>
-                            <span>Assinatura: OK</span>
+                            <span class="icon">${analiseIA.assinatura_nome !== 'Ilegivel' ? '✅' : '❌'}</span>
+                            <span>Assinatura: ${analiseIA.assinatura_nome}</span>
                         </div>
                         <div class="checklist-item">
-                            <span class="icon">✅</span>
-                            <span>Imagem do Canhoto: OK</span>
+                            <span class="icon">${analiseIA.canhoto_status === 'Legivel' ? '✅' : '❌'}</span>
+                            <span>Canhoto: ${analiseIA.canhoto_status}</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">${analiseIA.recebedor_nome !== 'Sem nome' ? '✅' : '❌'}</span>
+                            <span>Recebedor: ${analiseIA.recebedor_nome}</span>
                         </div>
                     </div>
                     <div class="resultado" style="color: #996600;">
                         ⚠️ Resultado: Data divergente
                     </div>
                     <div class="checkbox-info">
-                        Sistema: ${item.querySelector(SELETORES.DATA_BAIXA)?.innerText || 'N/A'}<br>
-                        Imagem: ${valor}${diasTexto ? '<br>' + diasTexto : ''}<br>
+                        Sistema: ${dataDeBaixa}<br>
+                        Imagem: ${analiseIA.data_entrega}<br>
+                        Diferença: ${diasDiferenca} ${diasDiferenca === 1 ? 'dia' : 'dias'}<br>
                         ${modoAutomatico ? '✓ Data Divergente selecionado' : 'Data Divergente (não marcado)'}
                     </div>
                 `;
@@ -1029,6 +988,48 @@
                 
                 console.log('[Chance Agente] ⚠️ Badge DATA_DIVERGENTE adicionado');
                 
+                break;
+            }
+            
+            case 'SEM_CANHOTO': {
+                // Problema na imagem do canhoto
+                console.log('[Chance Agente] ❌ Erro: Canhoto ilegível ou sem canhoto');
+                item.classList.add('auditoria-item-erro');
+                
+                // Criar badge de diagnóstico
+                const diagnostico = document.createElement('div');
+                diagnostico.className = 'diagnostico-ia erro';
+                diagnostico.innerHTML = `
+                    <div class="titulo-badge">🤖 Auditoria da IA</div>
+                    <div class="checklist">
+                        <div class="checklist-item">
+                            <span class="icon">❌</span>
+                            <span>Canhoto: ${analiseIA.canhoto_status}</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">⚠️</span>
+                            <span>Análise comprometida</span>
+                        </div>
+                    </div>
+                    <div class="resultado" style="color: #cc0000;">
+                        ❌ Resultado: Problema na imagem do canhoto
+                    </div>
+                    <div class="checkbox-info">
+                        ${modoAutomatico ? '✓ Problema na imagem selecionado' : 'Problema na imagem (não marcado)'}
+                    </div>
+                `;
+                item.appendChild(diagnostico);
+                
+                if (modoAutomatico) {
+                    console.log('[Chance Agente] 📝 Marcando checkbox: Problema na Imagem');
+                    const checkboxImagem = item.querySelector(SELETORES.CHECKBOX_PROBLEMA_IMAGEM);
+                    if (checkboxImagem) {
+                        checkboxImagem.click();
+                        resultado.checkboxMarcado = 'Problema na Imagem';
+                    }
+                } else {
+                    resultado.checkboxMarcado = 'Problema na Imagem (não marcado - modo manual)';
+                }
                 break;
             }
             

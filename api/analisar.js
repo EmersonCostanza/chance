@@ -80,8 +80,6 @@ PERGUNTAS:
 5) Qual o nome do recebedor (ou sinônimo de quem recebeu a encomenda)?
    Respostas possíveis: "Nome do recebedor" ou "Sem nome"
 
-IMPORTANTE: A data esperada pelo sistema é ${dataDeBaixa}. Compare com a data do canhoto.
-
 RESPONDA EXATAMENTE NESTE FORMATO JSON (sem \`\`\`json, apenas o JSON puro):
 {
   "canhoto_status": "Legivel",
@@ -133,15 +131,7 @@ RESPONDA EXATAMENTE NESTE FORMATO JSON (sem \`\`\`json, apenas o JSON puro):
     console.log('Resposta JSON:', JSON.stringify(dadosAnalisados, null, 2));
     console.log('=====================');
 
-    return res.status(200).json({
-      analise: dadosAnalisados,
-      dataBaixaSistema: dataDeBaixa,
-      timestamp: new Date().toISOString(),
-      debug: {
-        respostaBruta: respostaIA,
-        tamanho: respostaIA.length
-      }
-    });
+    return res.status(200).json(dadosAnalisados);
 
   } catch (error) {
     console.error('Erro na análise:', error);
