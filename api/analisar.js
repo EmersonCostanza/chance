@@ -1,6 +1,6 @@
 // API Serverless para análise de entregas com Gemini AI
 // Endpoint: /api/analisar
-// Versão: 1.2
+// Versão: 1.3 - Logs detalhados + retry corrigido
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -91,8 +91,8 @@ export default async function handler(req, res) {
     
     console.log('✅ Imagem preparada');
 
-  console.log('🔍 Etapa 4: Preparando prompt...');
-  const prompt = `Analise o recibo de entrega da encomenda e responda APENAS com um JSON válido (sem markdown, sem explicações).
+    console.log('🔍 Etapa 4: Preparando prompt...');
+    const prompt = `Analise o recibo de entrega da encomenda e responda APENAS com um JSON válido (sem markdown, sem explicações).
 
 PERGUNTAS:
 
@@ -120,140 +120,141 @@ RESPONDA EXATAMENTE NESTE FORMATO JSON (sem \`\`\`json, apenas o JSON puro):
   "recebedor_nome": "nome ou Sem nome"
 }`;
 
-  // Sistema de retry com backoff exponencial
-  const MAX_RETRIES = 3;
-  let tentativa = 0;
-  let respostaIA = null;
-  let ultimoErro = null;
-  
-  console.log('🔍 Etapa 5: Iniciando loop de retry (max', MAX_RETRIES, 'tentativas)...');
-  
-  while (tentativa < MAX_RETRIES && !respostaIA) {
-    try {
-      if (tentativa > 0) {
-        // Backoff exponencial: 2s, 4s, 8s
-        const delayMs = Math.pow(2, tentativa) * 1000;
-        console.log(`⏳ Aguardando ${delayMs}ms antes da tentativa ${tentativa + 1}...`);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+    console.log('✅ Prompt preparado');
+
+    console.log('🔍 Etapa 5: Inicializando Gemini AI...');
+    // Inicializar Gemini com visão (FORA do loop, como era antes que funcionava)
+    const genAI = new GoogleGenerativeAI(apiKey);
+    console.log('✅ GoogleGenerativeAI inicializado');
+    
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-2.5-flash',
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 200,
       }
-      
-      console.log(`🚀 Tentativa ${tentativa + 1}/${MAX_RETRIES}: Inicializando Gemini...`);
-      
-      // Inicializar Gemini dentro do try para capturar erros de inicialização
-      const genAI = new GoogleGenerativeAI(apiKey);
-      console.log('✅ GoogleGenerativeAI inicializado');
-      
-      const model = genAI.getGenerativeModel({ 
-        model: 'gemini-2.5-flash',
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 200,
+    });
+    console.log('✅ Modelo gemini-2.5-flash carregado');
+
+    // Sistema de retry com backoff exponencial
+    const MAX_RETRIES = 3;
+    let tentativa = 0;
+    let respostaIA = null;
+    let ultimoErro = null;
+    
+    console.log('🔍 Etapa 6: Iniciando loop de retry (max', MAX_RETRIES, 'tentativas)...');
+    
+    while (tentativa < MAX_RETRIES && !respostaIA) {
+      try {
+        if (tentativa > 0) {
+          // Backoff exponencial: 2s, 4s, 8s
+          const delayMs = Math.pow(2, tentativa) * 1000;
+          console.log(`⏳ Aguardando ${delayMs}ms antes da tentativa ${tentativa + 1}...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
         }
-      });
-      console.log('✅ Modelo gemini-2.5-flash carregado');
-      
-      console.log('📤 Enviando requisição para Gemini API...');
-      const result = await model.generateContent([prompt, imagePart]);
-      console.log('✅ Resposta recebida do Gemini');
-      
-      const response = await result.response;
-      respostaIA = response.text().trim();
-      
-      console.log('✅ Texto extraído da resposta:', respostaIA.substring(0, 100) + '...');
-      console.log('✅ SUCESSO na tentativa', tentativa + 1);
-      break; // Sucesso, sair do loop
-      
-    } catch (apiError) {
-      ultimoErro = apiError;
-      tentativa++;
-      
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`❌ ERRO na tentativa ${tentativa}/${MAX_RETRIES}`);
-      console.log('📛 Tipo do erro:', apiError.constructor.name);
-      console.log('📛 Mensagem:', apiError.message);
-      console.log('📛 Stack:', apiError.stack);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      
-      // Se for erro 503 (overloaded) ou 429 (rate limit) e ainda há tentativas, continuar
-      const isRetryableError = apiError.message.includes('503') || 
-                                apiError.message.includes('overloaded') ||
-                                apiError.message.includes('429') ||
-                                apiError.message.includes('rate limit');
-      
-      if (isRetryableError && tentativa < MAX_RETRIES) {
-        console.log('🔄 Erro recuperável detectado, tentando novamente...');
-        continue;
-      } else if (!isRetryableError) {
-        console.log('💥 Erro NÃO recuperável - abortando tentativas');
-        break;
+        
+        console.log(`🚀 Tentativa ${tentativa + 1}/${MAX_RETRIES}: Enviando requisição para Gemini API...`);
+        const result = await model.generateContent([prompt, imagePart]);
+        console.log('✅ Resposta recebida do Gemini');
+        
+        const response = await result.response;
+        respostaIA = response.text().trim();
+        
+        console.log('✅ Texto extraído da resposta:', respostaIA.substring(0, 100) + '...');
+        console.log('✅ SUCESSO na tentativa', tentativa + 1);
+        break; // Sucesso, sair do loop
+        
+      } catch (apiError) {
+        ultimoErro = apiError;
+        tentativa++;
+        
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`❌ ERRO na tentativa ${tentativa}/${MAX_RETRIES}`);
+        console.log('📛 Tipo do erro:', apiError.constructor.name);
+        console.log('📛 Mensagem:', apiError.message);
+        console.log('📛 Stack:', apiError.stack);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
+        // Se for erro 503 (overloaded) ou 429 (rate limit) e ainda há tentativas, continuar
+        const isRetryableError = apiError.message.includes('503') || 
+                                  apiError.message.includes('overloaded') ||
+                                  apiError.message.includes('429') ||
+                                  apiError.message.includes('rate limit');
+        
+        if (isRetryableError && tentativa < MAX_RETRIES) {
+          console.log('🔄 Erro recuperável detectado, tentando novamente...');
+          continue;
+        } else if (!isRetryableError) {
+          console.log('💥 Erro NÃO recuperável - abortando tentativas');
+          break;
+        }
       }
     }
-  }
-  
-  // Se todas as tentativas falharam, retornar erro estruturado
-  if (!respostaIA) {
-    console.log('⛔⛔⛔ TODAS AS TENTATIVAS FALHARAM ⛔⛔⛔');
-    console.log('❌ Total de tentativas realizadas:', tentativa);
-    console.log('❌ Último erro capturado:', ultimoErro ? ultimoErro.message : 'Nenhum');
     
-    return res.status(503).json({
-      error: ultimoErro ? ultimoErro.message : 'Serviço temporariamente indisponível',
-      resposta: 'ERRO_API_SOBRECARREGADA',
-      tentativas: tentativa,
-      canhoto_status: "Erro API",
-      assinatura_nome: "Erro API",
-      data_entrega: "Erro",
-      documento_status: "Erro API",
-      recebedor_nome: "Erro API"
-    });
-  }
-  
-  console.log('🔍 Etapa 6: Processando resposta da IA...');
-  
-  // Remover marcadores de código se a IA incluir
-  respostaIA = respostaIA.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  console.log('✅ Marcadores removidos');
-  
-  // GARANTIR QUE NÃO SEJA VAZIO
-  if (!respostaIA || respostaIA.length === 0) {
-    console.log('⚠️ IA retornou resposta vazia! Usando JSON de fallback');
-    respostaIA = JSON.stringify({
-      canhoto_status: "Sem canhoto",
-      assinatura_nome: "Ilegivel",
-      data_entrega: "Erro",
-      documento_status: "sem doc",
-      recebedor_nome: "Sem nome"
-    });
-  }
-  
-  console.log('🔍 Etapa 7: Parseando JSON...');
-  console.log('📄 JSON a ser parseado:', respostaIA);
-  
-  // Tentar parsear o JSON para validar
-  let dadosAnalisados;
-  try {
-    dadosAnalisados = JSON.parse(respostaIA);
-    console.log('✅ JSON parseado com sucesso:', dadosAnalisados);
-  } catch (parseError) {
-    console.log('❌ ERRO ao parsear JSON:', parseError.message);
-    console.log('📄 String que falhou:', respostaIA);
-    dadosAnalisados = {
-      canhoto_status: "Sem canhoto",
-      assinatura_nome: "Ilegivel",
-      data_entrega: "Erro",
-      documento_status: "sem doc",
-      recebedor_nome: "Sem nome",
-      erro_parse: true
-    };
-  }
-  
-  console.log('========================================');
-  console.log('✅ PROCESSAMENTO CONCLUÍDO COM SUCESSO');
-  console.log('📊 Resultado final:', JSON.stringify(dadosAnalisados, null, 2));
-  console.log('========================================');
+    // Se todas as tentativas falharam, retornar erro estruturado
+    if (!respostaIA) {
+      console.log('⛔⛔⛔ TODAS AS TENTATIVAS FALHARAM ⛔⛔⛔');
+      console.log('❌ Total de tentativas realizadas:', tentativa);
+      console.log('❌ Último erro capturado:', ultimoErro ? ultimoErro.message : 'Nenhum');
+      
+      return res.status(503).json({
+        error: ultimoErro ? ultimoErro.message : 'Serviço temporariamente indisponível',
+        resposta: 'ERRO_API_SOBRECARREGADA',
+        tentativas: tentativa,
+        canhoto_status: "Erro API",
+        assinatura_nome: "Erro API",
+        data_entrega: "Erro",
+        documento_status: "Erro API",
+        recebedor_nome: "Erro API"
+      });
+    }
+    
+    console.log('🔍 Etapa 7: Processando resposta da IA...');
+    
+    // Remover marcadores de código se a IA incluir
+    respostaIA = respostaIA.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    console.log('✅ Marcadores removidos');
+    
+    // GARANTIR QUE NÃO SEJA VAZIO
+    if (!respostaIA || respostaIA.length === 0) {
+      console.log('⚠️ IA retornou resposta vazia! Usando JSON de fallback');
+      respostaIA = JSON.stringify({
+        canhoto_status: "Sem canhoto",
+        assinatura_nome: "Ilegivel",
+        data_entrega: "Erro",
+        documento_status: "sem doc",
+        recebedor_nome: "Sem nome"
+      });
+    }
+    
+    console.log('🔍 Etapa 8: Parseando JSON...');
+    console.log('📄 JSON a ser parseado:', respostaIA);
+    
+    // Tentar parsear o JSON para validar
+    let dadosAnalisados;
+    try {
+      dadosAnalisados = JSON.parse(respostaIA);
+      console.log('✅ JSON parseado com sucesso:', dadosAnalisados);
+    } catch (parseError) {
+      console.log('❌ ERRO ao parsear JSON:', parseError.message);
+      console.log('📄 String que falhou:', respostaIA);
+      dadosAnalisados = {
+        canhoto_status: "Sem canhoto",
+        assinatura_nome: "Ilegivel",
+        data_entrega: "Erro",
+        documento_status: "sem doc",
+        recebedor_nome: "Sem nome",
+        erro_parse: true
+      };
+    }
+    
+    console.log('========================================');
+    console.log('✅ PROCESSAMENTO CONCLUÍDO COM SUCESSO');
+    console.log('📊 Resultado final:', JSON.stringify(dadosAnalisados, null, 2));
+    console.log('========================================');
 
-  return res.status(200).json(dadosAnalisados);
-  
+    return res.status(200).json(dadosAnalisados);
+    
   } catch (error) {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('❌❌❌ ERRO INESPERADO NO CATCH EXTERNO ❌❌❌');
