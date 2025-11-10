@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         Agente de Auditoria (Chance)
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  Assistente de auditoria para validação de entregas com IA
 // @author       Emerson Costanza
+// @match        https://chancce.moblink.com.br/chancce_painel/main/redirecionar/13*
 // @match        https://chancce.moblink.com.br/painel/index.php/main/redirecionar/13/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
