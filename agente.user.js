@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Agente de Auditoria (Chance)
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @description  Assistente de auditoria para validação de entregas com IA
 // @author       Emerson Costanza
 // @match        https://chancce.moblink.com.br/chancce_painel/main/redirecionar/13*
@@ -1168,12 +1168,108 @@
         }
     }
 
+    // ========== POPUP DE TESTE ==========
+    function criarPopupTeste() {
+        const popup = document.createElement('div');
+        popup.id = 'popup-teste-ia';
+        popup.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            z-index: 9999999;
+            min-width: 500px;
+            text-align: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        `;
+        
+        popup.innerHTML = `
+            <h2 style="margin: 0 0 20px 0; font-size: 28px;">🤖 Teste de Integração IA</h2>
+            <p style="margin: 0 0 20px 0; font-size: 16px; opacity: 0.9;">
+                Tampermonkey está funcionando corretamente!
+            </p>
+            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                <div style="font-size: 14px; margin-bottom: 10px;">
+                    ✅ Script carregado: <strong>v1.2</strong>
+                </div>
+                <div style="font-size: 14px; margin-bottom: 10px;">
+                    ✅ API: <strong>chance-rho.vercel.app</strong>
+                </div>
+                <div style="font-size: 14px;">
+                    ✅ Status: <strong id="status-api">Testando...</strong>
+                </div>
+            </div>
+            <button id="btnTestarAPI" style="
+                background: #00FF00;
+                color: #000;
+                border: none;
+                padding: 15px 30px;
+                border-radius: 10px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                margin-right: 10px;
+            ">🚀 Testar API</button>
+            <button id="btnFecharPopup" style="
+                background: rgba(255,255,255,0.2);
+                color: white;
+                border: 2px solid white;
+                padding: 15px 30px;
+                border-radius: 10px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+            ">❌ Fechar</button>
+        `;
+        
+        document.body.appendChild(popup);
+        
+        // Botão de teste da API
+        document.getElementById('btnTestarAPI').addEventListener('click', async () => {
+            const statusEl = document.getElementById('status-api');
+            statusEl.textContent = 'Testando...';
+            statusEl.style.color = '#FFA500';
+            
+            try {
+                const response = await fetch('https://chance-rho.vercel.app/api/hello');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    statusEl.textContent = '✅ API Online!';
+                    statusEl.style.color = '#00FF00';
+                } else {
+                    statusEl.textContent = '⚠️ API com problemas';
+                    statusEl.style.color = '#FF9900';
+                }
+            } catch (error) {
+                statusEl.textContent = '❌ API offline';
+                statusEl.style.color = '#FF0000';
+            }
+        });
+        
+        // Botão fechar
+        document.getElementById('btnFecharPopup').addEventListener('click', () => {
+            popup.remove();
+            // Criar interface normal após fechar
+            criarInterface();
+        });
+        
+        console.log('[Chance Agente] 🎯 Popup de teste criado e exibido');
+    }
+
     // ========== INICIALIZAÇÃO ==========
     console.log('[Chance Agente] Script carregado!');
     
     window.addEventListener('load', () => {
         console.log('[Chance Agente] Página carregada, criando interface...');
-        criarInterface();
+        
+        // Criar popup de teste primeiro
+        criarPopupTeste();
         
         // Se modo automático estiver ativado, iniciar auditoria
         if (GM_getValue('analisarTudo', false)) {
