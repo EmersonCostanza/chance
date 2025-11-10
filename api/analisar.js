@@ -199,15 +199,17 @@ RESPONDA EXATAMENTE NESTE FORMATO JSON (sem \`\`\`json, apenas o JSON puro):
     console.log('🔍 Etapa 6: Iniciando loop de retry (max', MAX_RETRIES, 'tentativas)...');
     
     while (tentativa < MAX_RETRIES && !respostaIA) {
+      tentativa++; // Incrementar ANTES do try para contar corretamente
+      
       try {
-        if (tentativa > 0) {
+        if (tentativa > 1) { // Mudado de tentativa > 0 para tentativa > 1
           // Backoff exponencial: 2s, 4s, 8s
-          const delayMs = Math.pow(2, tentativa) * 1000;
-          console.log(`⏳ Aguardando ${delayMs}ms antes da tentativa ${tentativa + 1}...`);
+          const delayMs = Math.pow(2, tentativa - 1) * 1000;
+          console.log(`⏳ Aguardando ${delayMs}ms antes da tentativa ${tentativa}...`);
           await new Promise(resolve => setTimeout(resolve, delayMs));
         }
         
-        console.log(`🚀 Tentativa ${tentativa + 1}/${MAX_RETRIES}: Enviando requisição para Gemini API...`);
+        console.log(`🚀 Tentativa ${tentativa}/${MAX_RETRIES}: Enviando requisição para Gemini API...`);
         console.log('📊 Parâmetros da requisição:');
         console.log('  - Prompt length:', prompt.length);
         console.log('  - Image data length:', imagePart.inlineData.data.length);
@@ -220,12 +222,11 @@ RESPONDA EXATAMENTE NESTE FORMATO JSON (sem \`\`\`json, apenas o JSON puro):
         respostaIA = response.text().trim();
         
         console.log('✅ Texto extraído da resposta:', respostaIA.substring(0, 100) + '...');
-        console.log('✅ SUCESSO na tentativa', tentativa + 1);
+        console.log('✅ SUCESSO na tentativa', tentativa);
         break; // Sucesso, sair do loop
         
       } catch (apiError) {
         ultimoErro = apiError;
-        tentativa++;
         
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log(`❌ ERRO na tentativa ${tentativa}/${MAX_RETRIES}`);
