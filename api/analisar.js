@@ -54,22 +54,27 @@ export default async function handler(req, res) {
     };
 
     // Prompt para análise completa
-    const prompt = `Você é um auditor de entregas. Analise a imagem do canhoto de entrega.
+    const prompt = `Analise o canhoto de entrega na imagem.
 
-Data de Baixa informada no sistema: ${dataDeBaixa}
+IMPORTANTE: Responda EXATAMENTE com apenas UM dos códigos abaixo (SEM aspas, SEM explicações):
 
-Tarefas:
-1. Verifique se a imagem está legível e contém informações de entrega
-2. Encontre a data de entrega escrita na imagem (pode estar em qualquer formato)
-3. Compare a data da imagem com a Data de Baixa fornecida (${dataDeBaixa})
+OK
+ou
+ERRO_DADOS
+ou
+ERRO_IMAGEM
+ou
+DATA_DIVERGENTE: DD/MM/AAAA
 
-Responda APENAS com um destes códigos:
-- "OK" - se a imagem está legível E as datas coincidem
-- "ERRO_DADOS" - se a imagem está ilegível, em branco ou sem dados de entrega
-- "ERRO_IMAGEM" - se há problema técnico na imagem (corrompida, não carregou, etc)
-- "DATA_DIVERGENTE: DD/MM/AAAA" - se você encontrou uma data diferente (substitua DD/MM/AAAA pela data que você leu na imagem no formato brasileiro)
+Regras:
+1. Se a imagem mostra dados legíveis com assinatura e data visível = OK
+2. Se falta informação ou está ilegível = ERRO_DADOS
+3. Se a imagem não carregou ou está corrompida = ERRO_IMAGEM
+4. Se a data na imagem (${dataDeBaixa}) está diferente = DATA_DIVERGENTE: (coloque a data que você viu)
 
-Responda apenas o código, nada mais.`;
+Data do sistema: ${dataDeBaixa}
+
+Responda APENAS o código.`;
 
     const result = await model.generateContent([prompt, imagePart]);
     const response = await result.response;

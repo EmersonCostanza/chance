@@ -171,11 +171,81 @@
             font-weight: normal;
             color: #666;
         }
+        
+        /* Badge de Resumo da Auditoria */
+        #resumo-auditoria {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            z-index: 999998;
+            max-width: 350px;
+            border-left: 5px solid #667eea;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        #resumo-auditoria h4 {
+            margin: 0 0 15px 0;
+            color: #667eea;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        #resumo-auditoria .checklist-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        
+        #resumo-auditoria .checklist-item:last-child {
+            border-bottom: none;
+        }
+        
+        #resumo-auditoria .check-icon {
+            font-size: 18px;
+            min-width: 24px;
+        }
+        
+        #resumo-auditoria .resultado-final {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        #resumo-auditoria .resultado-final.sucesso {
+            background: linear-gradient(to right, #e8ffe8, #d4ffd4);
+            color: #006600;
+            border: 2px solid #00cc00;
+        }
+        
+        #resumo-auditoria .resultado-final.erro {
+            background: linear-gradient(to right, #ffe8e8, #ffd4d4);
+            color: #cc0000;
+            border: 2px solid #ff0000;
+        }
+        
+        #resumo-auditoria .stats {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
     `);
 
     // ========== VARIÁVEIS GLOBAIS ==========
     let itensProcessados = 0;
     let totalItens = 0;
+    let resultadosAuditoria = []; // Array para armazenar resultados individuais
 
     // ========== CRIAR INTERFACE ==========
     function criarInterface() {
@@ -290,6 +360,16 @@
     // ========== LÓGICA PRINCIPAL ==========
     function iniciarAuditoria() {
         console.log('[Chance Agente] 🔍 Procurando seletor:', SELETORES.CONTAINER_ITEM);
+        
+        // Limpar resultados anteriores
+        resultadosAuditoria = [];
+        
+        // Remover resumo anterior se existir
+        const resumoAntigo = document.getElementById('resumo-auditoria');
+        if (resumoAntigo) {
+            resumoAntigo.remove();
+        }
+        
         const itens = document.querySelectorAll(SELETORES.CONTAINER_ITEM);
         
         console.log('[Chance Agente] 📊 Itens encontrados:', itens.length);
@@ -433,6 +513,14 @@
             modoAutomatico: modoAutomatico
         });
         
+        // Armazenar resultado da auditoria
+        const resultado = {
+            dataBaixa: item.querySelector(SELETORES.DATA_BAIXA)?.innerText || 'N/A',
+            codigo: codigo,
+            valor: valor,
+            checkboxMarcado: null
+        };
+        
         // Garantir que o item tenha position relative
         if (window.getComputedStyle(item).position === 'static') {
             item.style.position = 'relative';
@@ -459,6 +547,8 @@
                 
                 console.log('[Chance Agente] ✅ Badge OK adicionado:', diagnostico);
                 console.log('[Chance Agente] 📍 Badge está visível?', diagnostico.offsetParent !== null);
+                
+                resultado.checkboxMarcado = 'Nenhum (aprovado)';
                 
                 // Não marca nenhum checkbox quando está OK
                 break;
@@ -487,9 +577,11 @@
                     const checkboxCampoBranco = item.querySelector(SELETORES.CHECKBOX_CAMPO_BRANCO);
                     if (checkboxCampoBranco) {
                         checkboxCampoBranco.click();
+                        resultado.checkboxMarcado = 'Campo em Branco';
                     }
                 } else {
                     console.log('[Chance Agente] ℹ️ Modo automático desativado - checkbox não será marcado');
+                    resultado.checkboxMarcado = 'Campo em Branco (não marcado - modo manual)';
                 }
                 break;
             }
@@ -516,9 +608,11 @@
                     const checkboxImagem = item.querySelector(SELETORES.CHECKBOX_PROBLEMA_IMAGEM);
                     if (checkboxImagem) {
                         checkboxImagem.click();
+                        resultado.checkboxMarcado = 'Problema na Imagem';
                     }
                 } else {
                     console.log('[Chance Agente] ℹ️ Modo automático desativado - checkbox não será marcado');
+                    resultado.checkboxMarcado = 'Problema na Imagem (não marcado - modo manual)';
                 }
                 break;
             }
@@ -564,13 +658,16 @@
                                 diasTexto = ` (${diasDiferenca} ${diasDiferenca === 1 ? 'dia' : 'dias'} de diferença)`;
                                 
                                 console.log('[Chance Agente] 📝 Marcando checkbox: Data Divergente (' + diasDiferenca + ' dias)');
+                                resultado.checkboxMarcado = `Data Divergente (${diasDiferenca} dias)`;
                             }
                         }
                     }
                 } else if (!modoAutomatico) {
                     console.log('[Chance Agente] ℹ️ Modo automático desativado - checkbox não será marcado');
+                    resultado.checkboxMarcado = 'Data Divergente (não marcado - modo manual)';
                 } else {
                     console.log('[Chance Agente] ⚠️ Valor da data não encontrado na resposta');
+                    resultado.checkboxMarcado = 'Data Divergente (erro ao calcular)';
                 }
                 
                 // Criar badge de diagnóstico
@@ -592,6 +689,8 @@
             default: {
                 console.log('[Chance Agente] ❓ Código desconhecido recebido:', codigo);
                 
+                resultado.checkboxMarcado = `Resposta inesperada: ${codigo}`;
+                
                 // Criar badge de diagnóstico para erro desconhecido
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
@@ -604,6 +703,9 @@
                 break;
             }
         }
+        
+        // Adicionar resultado ao array
+        resultadosAuditoria.push(resultado);
         
         // Verificar se o badge foi realmente adicionado
         const badgeAdicionado = item.querySelector('.diagnostico-ia');
@@ -637,10 +739,101 @@
         if (itensProcessados === totalItens) {
             atualizarStatus(`✅ Auditoria concluída! ${totalItens} itens analisados.`);
             
+            // Criar resumo da auditoria
+            criarResumoAuditoria();
+            
             if (GM_getValue('gravarAuto', false)) {
                 setTimeout(() => clicarGravarTodos(), 2000);
             }
         }
+    }
+    
+    function criarResumoAuditoria() {
+        console.log('[Chance Agente] 📊 Criando resumo da auditoria...');
+        
+        // Contar resultados
+        const totalOK = resultadosAuditoria.filter(r => r.codigo === 'OK').length;
+        const totalErros = resultadosAuditoria.filter(r => r.codigo !== 'OK').length;
+        
+        // Contar por tipo
+        const contadores = {
+            dataBaixaOk: 0,
+            assinaturaOk: 0,
+            imagemOk: 0,
+            erros: []
+        };
+        
+        resultadosAuditoria.forEach(r => {
+            if (r.codigo === 'OK') {
+                contadores.dataBaixaOk++;
+                contadores.assinaturaOk++;
+                contadores.imagemOk++;
+            } else {
+                if (r.codigo === 'ERRO_DADOS') {
+                    contadores.erros.push('Campos em branco ou ilegíveis detectados');
+                } else if (r.codigo === 'ERRO_IMAGEM') {
+                    contadores.imagemOk = Math.max(0, contadores.imagemOk - 1);
+                    contadores.erros.push('Problemas nas imagens detectados');
+                } else if (r.codigo === 'DATA_DIVERGENTE') {
+                    contadores.dataBaixaOk = Math.max(0, contadores.dataBaixaOk - 1);
+                    contadores.erros.push(`Data divergente: ${r.valor}`);
+                }
+            }
+        });
+        
+        // Criar elemento do resumo
+        const resumo = document.createElement('div');
+        resumo.id = 'resumo-auditoria';
+        
+        let checklistHTML = `
+            <div class="checklist-item">
+                <span class="check-icon">${contadores.dataBaixaOk === totalItens ? '✅' : '⚠️'}</span>
+                <span>Data de Baixa: ${contadores.dataBaixaOk}/${totalItens} OK</span>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">${contadores.assinaturaOk === totalItens ? '✅' : '⚠️'}</span>
+                <span>Assinatura: ${contadores.assinaturaOk}/${totalItens} OK</span>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">${contadores.imagemOk === totalItens ? '✅' : '⚠️'}</span>
+                <span>Imagem do Canhoto: ${contadores.imagemOk}/${totalItens} OK</span>
+            </div>
+        `;
+        
+        let resultadoFinal = '';
+        if (totalErros === 0) {
+            resultadoFinal = `
+                <div class="resultado-final sucesso">
+                    ✅ Resultado: OK, pode gravar!
+                </div>
+            `;
+        } else {
+            const checkboxesMarcados = resultadosAuditoria
+                .filter(r => r.checkboxMarcado && r.checkboxMarcado !== 'Nenhum (aprovado)')
+                .map(r => r.checkboxMarcado)
+                .filter((v, i, a) => a.indexOf(v) === i); // Remove duplicados
+            
+            resultadoFinal = `
+                <div class="resultado-final erro">
+                    ❌ Resultado: ${totalErros} ${totalErros === 1 ? 'erro detectado' : 'erros detectados'}<br>
+                    <small style="font-size: 11px; font-weight: normal; margin-top: 5px; display: block;">
+                        ${checkboxesMarcados.join(', ')}
+                    </small>
+                </div>
+            `;
+        }
+        
+        resumo.innerHTML = `
+            <h4>📋 Resumo da Auditoria</h4>
+            ${checklistHTML}
+            ${resultadoFinal}
+            <div class="stats">
+                Analisados: ${totalItens} itens | Sucesso: ${totalOK} | Erros: ${totalErros}
+            </div>
+        `;
+        
+        document.body.appendChild(resumo);
+        console.log('[Chance Agente] ✅ Resumo criado com sucesso');
     }
 
     function clicarGravarTodos() {
