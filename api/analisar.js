@@ -46,28 +46,44 @@ export default async function handler(req, res) {
     });
 
     // Preparar imagem para o Gemini
+    const base64Data = imagemBase64.includes(',') ? imagemBase64.split(',')[1] : imagemBase64;
+    
+    console.log('=== DEBUG IMAGEM ===');
+    console.log('Tamanho da string base64:', base64Data.length);
+    console.log('Primeiros 50 caracteres:', base64Data.substring(0, 50));
+    console.log('===================');
+    
     const imagePart = {
       inlineData: {
-        data: imagemBase64.split(',')[1], // Remove o prefixo data:image/...
+        data: base64Data,
         mimeType: 'image/jpeg'
       }
     };
 
-    // Prompt para análise completa - ULTRA SIMPLIFICADO
-    const prompt = `Olhe esta imagem de comprovante de entrega.
+    // Prompt para análise completa - VERSÃO MELHORADA
+    const prompt = `Você está analisando um comprovante de entrega. VOCÊ DEVE RESPONDER, NÃO FIQUE EM SILÊNCIO.
 
-Data esperada: ${dataDeBaixa}
+INSTRUÇÕES:
+1. Olhe a imagem do comprovante
+2. Procure pela data de entrega escrita na imagem
+3. A data esperada é: ${dataDeBaixa}
 
-Encontre a data de entrega na imagem e responda APENAS:
-- Se a data na imagem é ${dataDeBaixa}, responda: OK
-- Se você não consegue ler nada na imagem, responda: ERRO_DADOS  
-- Se a data na imagem é diferente de ${dataDeBaixa}, responda: DATA_DIVERGENTE: [coloque aqui a data que você viu no formato DD/MM/AAAA]
+RESPONDA EXATAMENTE ASSIM (escolha UMA opção):
+- Se a data na imagem for ${dataDeBaixa}: responda "OK"
+- Se não conseguir ler a imagem ou não houver data visível: responda "ERRO_DADOS"
+- Se a data na imagem for diferente de ${dataDeBaixa}: responda "DATA_DIVERGENTE: DD/MM/AAAA" (substitua DD/MM/AAAA pela data que você viu)
 
-Responda SOMENTE o código. Uma palavra apenas (ou DATA_DIVERGENTE: seguido da data).`;
+IMPORTANTE: VOCÊ DEVE RESPONDER UMA DAS OPÇÕES ACIMA. NÃO RETORNE VAZIO.`;
 
     const result = await model.generateContent([prompt, imagePart]);
     const response = await result.response;
-    const respostaIA = response.text().trim();
+    let respostaIA = response.text().trim();
+    
+    // GARANTIR QUE NÃO SEJA VAZIO
+    if (!respostaIA || respostaIA.length === 0) {
+      console.error('⚠️ IA retornou resposta vazia! Forçando ERRO_DADOS');
+      respostaIA = 'ERRO_DADOS';
+    }
     
     // Log da resposta da IA
     console.log('=== RESPOSTA DA IA ===');

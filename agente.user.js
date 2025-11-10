@@ -218,7 +218,7 @@
         /* Badge de diagnóstico da IA - CHECKLIST INDIVIDUAL */
         .diagnostico-ia {
             position: absolute !important;
-            bottom: 10px !important;
+            top: 10px !important;
             right: 10px !important;
             background: white !important;
             color: #333 !important;
@@ -716,7 +716,7 @@
                     // Criar badge de erro de API
                     const diagnostico = document.createElement('div');
                     diagnostico.className = 'diagnostico-ia erro';
-                    diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                    diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                     diagnostico.innerHTML = `
                         <div class="titulo">❌ Erro na API</div>
                         <div class="detalhes">Falha ao comunicar com servidor: ${error.message}</div>
@@ -818,7 +818,7 @@
                 // Criar badge de diagnóstico com checklist
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia ok';
-                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -858,7 +858,7 @@
                 // Criar badge de diagnóstico com checklist
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -909,7 +909,7 @@
                 // Criar badge de diagnóstico com checklist
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -1007,7 +1007,7 @@
                 // Criar badge de diagnóstico
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia alerta';
-                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -1048,7 +1048,7 @@
                 // Criar badge de diagnóstico para erro desconhecido
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
