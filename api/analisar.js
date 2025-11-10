@@ -20,35 +20,46 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Método não permitido. Use POST.' });
   }
 
-  // Validar dados de entrada primeiro
-  const { dataDeBaixa, imagemBase64 } = req.body;
+  try {
+    // Validar dados de entrada primeiro
+    const { dataDeBaixa, imagemBase64 } = req.body;
 
-  if (!dataDeBaixa || !imagemBase64) {
-    return res.status(400).json({
-      error: 'Dados incompletos',
-      resposta: 'ERRO_DADOS'
-    });
-  }
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'API Key não configurada' });
-  }
-
-  // Preparar imagem para o Gemini
-  const base64Data = imagemBase64.includes(',') ? imagemBase64.split(',')[1] : imagemBase64;
-  
-  console.log('=== DEBUG IMAGEM ===');
-  console.log('Tamanho da string base64:', base64Data.length);
-  console.log('Primeiros 50 caracteres:', base64Data.substring(0, 50));
-  console.log('===================');
-  
-  const imagePart = {
-    inlineData: {
-      data: base64Data,
-      mimeType: 'image/jpeg'
+    if (!dataDeBaixa || !imagemBase64) {
+      return res.status(400).json({
+        error: 'Dados incompletos',
+        resposta: 'ERRO_DADOS',
+        tentativas: 0,
+        canhoto_status: "Erro",
+        assinatura_nome: "Erro",
+        data_entrega: "Erro",
+        documento_status: "Erro",
+        recebedor_nome: "Erro"
+      });
     }
-  };
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ 
+        error: 'API Key não configurada',
+        resposta: 'ERRO_SISTEMA',
+        tentativas: 0
+      });
+    }
+
+    // Preparar imagem para o Gemini
+    const base64Data = imagemBase64.includes(',') ? imagemBase64.split(',')[1] : imagemBase64;
+    
+    console.log('=== DEBUG IMAGEM ===');
+    console.log('Tamanho da string base64:', base64Data.length);
+    console.log('Primeiros 50 caracteres:', base64Data.substring(0, 50));
+    console.log('===================');
+    
+    const imagePart = {
+      inlineData: {
+        data: base64Data,
+        mimeType: 'image/jpeg'
+      }
+    };
 
   // Prompt para análise completa do recibo de entrega
   const prompt = `Analise o recibo de entrega da encomenda e responda APENAS com um JSON válido (sem markdown, sem explicações).
@@ -154,39 +165,37 @@ RESPONDA EXATAMENTE NESTE FORMATO JSON (sem \`\`\`json, apenas o JSON puro):
     });
   }
   
+  // Remover marcadores de código se a IA incluir
+  respostaIA = respostaIA.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  
+  // GARANTIR QUE NÃO SEJA VAZIO
+  if (!respostaIA || respostaIA.length === 0) {
+    console.error('⚠️ IA retornou resposta vazia! Forçando JSON de erro');
+    respostaIA = JSON.stringify({
+      canhoto_status: "Sem canhoto",
+      assinatura_nome: "Ilegivel",
+      data_entrega: "Erro",
+      documento_status: "sem doc",
+      recebedor_nome: "Sem nome"
+    });
+  }
+  
+  // Tentar parsear o JSON para validar
+  let dadosAnalisados;
   try {
-    
-    // Remover marcadores de código se a IA incluir
-    respostaIA = respostaIA.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    
-    // GARANTIR QUE NÃO SEJA VAZIO
-    if (!respostaIA || respostaIA.length === 0) {
-      console.error('⚠️ IA retornou resposta vazia! Forçando JSON de erro');
-      respostaIA = JSON.stringify({
-        canhoto_status: "Sem canhoto",
-        assinatura_nome: "Ilegivel",
-        data_entrega: "Erro",
-        documento_status: "sem doc",
-        recebedor_nome: "Sem nome"
-      });
-    }
-    
-    // Tentar parsear o JSON para validar
-    let dadosAnalisados;
-    try {
-      dadosAnalisados = JSON.parse(respostaIA);
-    } catch (parseError) {
-      console.error('⚠️ Erro ao parsear JSON da IA:', parseError);
-      console.error('Resposta recebida:', respostaIA);
-      dadosAnalisados = {
-        canhoto_status: "Sem canhoto",
-        assinatura_nome: "Ilegivel",
-        data_entrega: "Erro",
-        documento_status: "sem doc",
-        recebedor_nome: "Sem nome",
-        erro_parse: true
-      };
-    }
+    dadosAnalisados = JSON.parse(respostaIA);
+  } catch (parseError) {
+    console.error('⚠️ Erro ao parsear JSON da IA:', parseError);
+    console.error('Resposta recebida:', respostaIA);
+    dadosAnalisados = {
+      canhoto_status: "Sem canhoto",
+      assinatura_nome: "Ilegivel",
+      data_entrega: "Erro",
+      documento_status: "sem doc",
+      recebedor_nome: "Sem nome",
+      erro_parse: true
+    };
+  }
     
     // Log da resposta da IA
     console.log('=== RESPOSTA DA IA ===');
