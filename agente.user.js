@@ -47,7 +47,7 @@
             border-radius: 15px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.3);
             z-index: 999999;
-            min-width: 280px;
+            min-width: 320px;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
@@ -76,6 +76,21 @@
             cursor: pointer;
         }
         
+        .toggle-container input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            border: none;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .flex-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
         #status-agente {
             margin-top: 15px;
             padding: 10px;
@@ -83,6 +98,60 @@
             border-radius: 5px;
             font-size: 12px;
             min-height: 40px;
+        }
+        
+        /* Painel de Logs JSON */
+        #painel-logs {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            z-index: 999998;
+            width: 500px;
+            max-height: 600px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            display: none;
+        }
+        
+        #painel-logs.visivel {
+            display: block;
+        }
+        
+        #painel-logs h4 {
+            margin: 0 0 10px 0;
+            color: #4ec9b0;
+            font-size: 14px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+        }
+        
+        #painel-logs pre {
+            background: #252526;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 5px 0;
+            border-left: 3px solid #4ec9b0;
+        }
+        
+        #painel-logs .log-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #2d2d30;
+            border-radius: 5px;
+            border-left: 3px solid #569cd6;
+        }
+        
+        #painel-logs .log-timestamp {
+            color: #858585;
+            font-size: 11px;
+            margin-bottom: 5px;
         }
         
         /* Feedback nos itens */
@@ -127,8 +196,8 @@
         /* Badge de diagnóstico da IA - CHECKLIST INDIVIDUAL */
         .diagnostico-ia {
             position: absolute !important;
-            bottom: 10px !important;
-            right: 10px !important;
+            top: 10px !important;
+            left: 10px !important;
             background: white !important;
             color: #333 !important;
             padding: 15px !important;
@@ -274,6 +343,8 @@
     let itensProcessados = 0;
     let totalItens = 0;
     let resultadosAuditoria = []; // Array para armazenar resultados individuais
+    let logsJson = []; // Array para armazenar logs da API
+    let processamentoPausado = false; // Flag de pausa
 
     // ========== CRIAR INTERFACE ==========
     function criarInterface() {
@@ -293,13 +364,34 @@
             
             <div class="toggle-container">
                 <label>
-                    <input type="checkbox" id="chkAnalisarGravarAuto">
-                    <span>Analisar e Gravar Automaticamente</span>
+                    <input type="checkbox" id="chkModoTeste">
+                    <span>🧪 Modo Teste (1 item apenas)</span>
                 </label>
+            </div>
+            
+            <div class="toggle-container">
+                <div class="flex-row">
+                    <label style="flex: 1;">
+                        <input type="checkbox" id="chkAnalisarGravarAuto">
+                        <span>Gravar Automaticamente</span>
+                    </label>
+                </div>
+                <div class="flex-row" style="margin-top: 8px;">
+                    <label style="font-size: 12px;">Páginas:</label>
+                    <input type="number" id="numPaginas" min="1" value="1" style="width: 50px;">
+                </div>
             </div>
             
             <button id="btnIniciarManual" style="width: 100%; padding: 10px; margin-top: 10px; background: #00FF00; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
                 ▶ Iniciar Análise
+            </button>
+            
+            <button id="btnPausar" style="width: 100%; padding: 10px; margin-top: 5px; background: #FF9900; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; display: none;">
+                ⏸ Pausar
+            </button>
+            
+            <button id="btnVerLogs" style="width: 100%; padding: 10px; margin-top: 5px; background: #333; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                📋 Ver Logs JSON
             </button>
             
             <div id="status-agente">Aguardando...</div>
@@ -308,9 +400,20 @@
         document.body.appendChild(painel);
         console.log('[Chance Agente] Painel adicionado ao body');
         
+        // Criar painel de logs
+        const painelLogs = document.createElement('div');
+        painelLogs.id = 'painel-logs';
+        painelLogs.innerHTML = `
+            <h4>📋 Logs da API (JSON)</h4>
+            <div id="conteudo-logs">Nenhum log ainda...</div>
+        `;
+        document.body.appendChild(painelLogs);
+        
         // Restaurar estado dos toggles
         document.getElementById('chkAnalisarTudo').checked = GM_getValue('analisarTudo', false);
         document.getElementById('chkAnalisarGravarAuto').checked = GM_getValue('gravarAuto', false);
+        document.getElementById('chkModoTeste').checked = GM_getValue('modoTeste', false);
+        document.getElementById('numPaginas').value = GM_getValue('numPaginas', 1);
         
         // Eventos dos toggles
         document.getElementById('chkAnalisarTudo').addEventListener('change', (e) => {
@@ -323,10 +426,43 @@
             atualizarStatus('✓ Configuração salva');
         });
         
+        document.getElementById('chkModoTeste').addEventListener('change', (e) => {
+            GM_setValue('modoTeste', e.target.checked);
+            atualizarStatus(e.target.checked ? '🧪 Modo teste ativado' : '✓ Modo normal ativado');
+        });
+        
+        document.getElementById('numPaginas').addEventListener('change', (e) => {
+            GM_setValue('numPaginas', parseInt(e.target.value) || 1);
+            atualizarStatus('✓ Número de páginas salvo');
+        });
+        
         // Botão manual
         document.getElementById('btnIniciarManual').addEventListener('click', () => {
             console.log('[Chance Agente] Botão manual clicado');
             iniciarAuditoria();
+        });
+        
+        // Botão pausar
+        document.getElementById('btnPausar').addEventListener('click', () => {
+            processamentoPausado = !processamentoPausado;
+            const btn = document.getElementById('btnPausar');
+            if (processamentoPausado) {
+                btn.textContent = '▶ Retomar';
+                btn.style.background = '#00FF00';
+                atualizarStatus('⏸ Processamento pausado');
+            } else {
+                btn.textContent = '⏸ Pausar';
+                btn.style.background = '#FF9900';
+                atualizarStatus('▶ Processamento retomado');
+            }
+        });
+        
+        // Botão ver logs
+        document.getElementById('btnVerLogs').addEventListener('click', () => {
+            const painelLogs = document.getElementById('painel-logs');
+            painelLogs.classList.toggle('visivel');
+            const btn = document.getElementById('btnVerLogs');
+            btn.textContent = painelLogs.classList.contains('visivel') ? '❌ Fechar Logs' : '📋 Ver Logs JSON';
         });
     }
 
@@ -335,6 +471,32 @@
         const status = document.getElementById('status-agente');
         if (status) {
             status.textContent = mensagem;
+        }
+    }
+    
+    function adicionarLogVisual(resultado) {
+        const timestamp = new Date().toLocaleTimeString('pt-BR');
+        const logItem = {
+            timestamp: timestamp,
+            data: resultado
+        };
+        
+        logsJson.unshift(logItem); // Adiciona no início do array
+        
+        // Limitar a 20 logs
+        if (logsJson.length > 20) {
+            logsJson.pop();
+        }
+        
+        // Atualizar painel de logs
+        const conteudoLogs = document.getElementById('conteudo-logs');
+        if (conteudoLogs) {
+            conteudoLogs.innerHTML = logsJson.map(log => `
+                <div class="log-item">
+                    <div class="log-timestamp">⏰ ${log.timestamp}</div>
+                    <pre>${JSON.stringify(log.data, null, 2)}</pre>
+                </div>
+            `).join('');
         }
     }
 
@@ -391,6 +553,12 @@
         
         // Limpar resultados anteriores
         resultadosAuditoria = [];
+        processamentoPausado = false;
+        
+        // Mostrar botão pausar
+        document.getElementById('btnPausar').style.display = 'block';
+        document.getElementById('btnPausar').textContent = '⏸ Pausar';
+        document.getElementById('btnPausar').style.background = '#FF9900';
         
         const itens = document.querySelectorAll(SELETORES.CONTAINER_ITEM);
         
@@ -413,17 +581,26 @@
             }
             
             atualizarStatus('❌ Nenhum item encontrado. Verifique os seletores CSS!');
+            document.getElementById('btnPausar').style.display = 'none';
             return;
         }
         
-        totalItens = itens.length;
+        // Verificar modo teste
+        const modoTeste = GM_getValue('modoTeste', false);
+        const itensParaProcessar = modoTeste ? [itens[0]] : Array.from(itens);
+        
+        totalItens = itensParaProcessar.length;
         itensProcessados = 0;
         
-        atualizarStatus(`📊 Analisando ${totalItens} itens...`);
+        atualizarStatus(`📊 Analisando ${totalItens} ${modoTeste ? 'item (MODO TESTE)' : 'itens'}...`);
         
-        itens.forEach((item, index) => {
+        itensParaProcessar.forEach((item, index) => {
             console.log('[Chance Agente] 🎯 Item', index, ':', item);
-            setTimeout(() => processarItem(item, index + 1), index * 1000); // 1s entre cada item
+            setTimeout(() => {
+                if (!processamentoPausado) {
+                    processarItem(item, index + 1);
+                }
+            }, index * 1000); // 1s entre cada item
         });
     }
 
@@ -488,8 +665,25 @@
                     }
                     
                     const resultado = JSON.parse(response.responseText);
-                    console.log('[Chance Agente] 📥 Resposta da IA:', resultado.resposta);
-                    console.log('[Chance Agente] 🔍 Análise completa:', resultado);
+                    
+                    // ============ LOGS DETALHADOS DA RESPOSTA DA IA ============
+                    console.log('╔═══════════════════════════════════════════════════════╗');
+                    console.log('║         RESPOSTA COMPLETA DA API/IA                   ║');
+                    console.log('╚═══════════════════════════════════════════════════════╝');
+                    console.log('📦 Objeto completo:', resultado);
+                    console.log('� resultado.resposta:', resultado.resposta);
+                    console.log('📏 Tipo:', typeof resultado.resposta);
+                    console.log('📏 Tamanho:', resultado.resposta?.length);
+                    console.log('🔤 Caracteres (array):', resultado.resposta ? Array.from(resultado.resposta) : 'N/A');
+                    console.log('🔢 Char codes:', resultado.resposta ? resultado.resposta.split('').map(c => c.charCodeAt(0)) : 'N/A');
+                    if (resultado.debug) {
+                        console.log('🐛 Debug info:', resultado.debug);
+                    }
+                    console.log('═══════════════════════════════════════════════════════');
+                    
+                    // Adicionar ao painel de logs visual
+                    adicionarLogVisual(resultado);
+                    
                     executarAcao(item, resultado.resposta);
                 } catch (error) {
                     console.error('[Chance Agente] ❌ Erro ao processar resposta:', error);
@@ -524,13 +718,23 @@
     function executarAcao(item, respostaIA) {
         item.classList.remove('auditoria-processando');
         
+        // ============ LOGS DETALHADOS DO PROCESSAMENTO ============
+        console.log('╔═══════════════════════════════════════════════════════╗');
+        console.log('║         PROCESSANDO RESPOSTA DA IA                    ║');
+        console.log('╚═══════════════════════════════════════════════════════╝');
+        console.log('📨 Resposta recebida (raw):', respostaIA);
+        console.log('📏 Tipo de dado:', typeof respostaIA);
+        console.log('📏 Tamanho:', respostaIA?.length);
+        console.log('🔤 String completa entre aspas:', `"${respostaIA}"`);
+        
         const modoAutomatico = GM_getValue('gravarAuto', false);
         
         // Normalizar resposta da IA (remover quebras de linha, espaços extras, etc)
         const respostaNormalizada = respostaIA.replace(/\n/g, ' ').trim().toUpperCase();
         
-        console.log('[Chance Agente] 🎯 Resposta original:', respostaIA);
-        console.log('[Chance Agente] 🎯 Resposta normalizada:', respostaNormalizada);
+        console.log('🔄 Após normalização:', respostaNormalizada);
+        console.log('🔤 Normalizada entre aspas:', `"${respostaNormalizada}"`);
+        console.log('📏 Tamanho normalizado:', respostaNormalizada.length);
         
         // Tentar identificar o código da resposta
         let codigo = '';
@@ -565,6 +769,7 @@
         console.log('[Chance Agente] 🎯 Código identificado:', codigo);
         console.log('[Chance Agente] 🎯 Valor extraído:', valor);
         console.log('[Chance Agente] 🎯 Modo automático:', modoAutomatico);
+        console.log('═══════════════════════════════════════════════════════');
         
         // Armazenar resultado da auditoria
         const resultado = {
@@ -591,7 +796,7 @@
                 // Criar badge de diagnóstico com checklist
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia ok';
-                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -631,7 +836,7 @@
                 // Criar badge de diagnóstico com checklist
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -682,7 +887,7 @@
                 // Criar badge de diagnóstico com checklist
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -780,7 +985,7 @@
                 // Criar badge de diagnóstico
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia alerta';
-                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -821,7 +1026,7 @@
                 // Criar badge de diagnóstico para erro desconhecido
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
