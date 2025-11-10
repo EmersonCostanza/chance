@@ -123,6 +123,53 @@
             content: '✓ ';
             font-size: 18px;
         }
+        
+        /* Badge de diagnóstico da IA */
+        .diagnostico-ia {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            color: #333;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 13px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border-left: 4px solid;
+            z-index: 1000;
+            max-width: 300px;
+            line-height: 1.4;
+        }
+        
+        .diagnostico-ia.ok {
+            border-left-color: #00FF00;
+            background: linear-gradient(to right, #e8ffe8, white);
+        }
+        
+        .diagnostico-ia.erro {
+            border-left-color: #FF0000;
+            background: linear-gradient(to right, #ffe8e8, white);
+        }
+        
+        .diagnostico-ia.alerta {
+            border-left-color: #FFA500;
+            background: linear-gradient(to right, #fff4e8, white);
+        }
+        
+        .diagnostico-ia .titulo {
+            font-size: 14px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .diagnostico-ia .detalhes {
+            font-size: 12px;
+            font-weight: normal;
+            color: #666;
+        }
     `);
 
     // ========== VARIÁVEIS GLOBAIS ==========
@@ -334,16 +381,24 @@
             modoAutomatico: modoAutomatico
         });
         
+        // Garantir que o item tenha position relative
+        item.style.position = 'relative';
+        
         switch(codigo) {
             case 'OK': {
                 // Tudo certo - NÃO marca nada, apenas feedback visual
                 console.log('[Chance Agente] ✅ Status: OK - Nenhum erro detectado');
                 item.classList.add('auditoria-item-ok');
-                const feedback = document.createElement('div');
-                feedback.className = 'feedback-ok-checklist';
-                feedback.textContent = 'Verificado';
-                item.style.position = 'relative';
-                item.appendChild(feedback);
+                
+                // Criar badge de diagnóstico
+                const diagnostico = document.createElement('div');
+                diagnostico.className = 'diagnostico-ia ok';
+                diagnostico.innerHTML = `
+                    <div class="titulo">✅ Verificado pela IA</div>
+                    <div class="detalhes">Data correta e legível</div>
+                `;
+                item.appendChild(diagnostico);
+                
                 // Não marca nenhum checkbox quando está OK
                 break;
             }
@@ -352,6 +407,16 @@
                 // Marcar checkbox de campo em branco OU ilegível
                 console.log('[Chance Agente] ⚠️ Erro detectado: Dados ausentes ou ilegíveis na imagem');
                 item.classList.add('auditoria-item-erro');
+                
+                // Criar badge de diagnóstico
+                const diagnostico = document.createElement('div');
+                diagnostico.className = 'diagnostico-ia erro';
+                diagnostico.innerHTML = `
+                    <div class="titulo">❌ Problema Detectado</div>
+                    <div class="detalhes">Data não encontrada ou ilegível na imagem</div>
+                `;
+                item.appendChild(diagnostico);
+                
                 if (modoAutomatico) {
                     console.log('[Chance Agente] 📝 Marcando checkbox: Campo em Branco');
                     // Marca campo em branco por padrão
@@ -369,6 +434,16 @@
                 // Marcar checkbox de problema na imagem
                 console.log('[Chance Agente] ⚠️ Erro detectado: Problema na qualidade/visualização da imagem');
                 item.classList.add('auditoria-item-erro');
+                
+                // Criar badge de diagnóstico
+                const diagnostico = document.createElement('div');
+                diagnostico.className = 'diagnostico-ia erro';
+                diagnostico.innerHTML = `
+                    <div class="titulo">❌ Problema na Imagem</div>
+                    <div class="detalhes">Imagem com qualidade ruim ou não carregou</div>
+                `;
+                item.appendChild(diagnostico);
+                
                 if (modoAutomatico) {
                     console.log('[Chance Agente] 📝 Marcando checkbox: Problema na Imagem');
                     const checkboxImagem = item.querySelector(SELETORES.CHECKBOX_PROBLEMA_IMAGEM);
@@ -386,6 +461,9 @@
                 console.log('[Chance Agente] ⚠️ Erro detectado: Data divergente encontrada:', valor);
                 item.classList.add('auditoria-item-erro');
                 
+                let diasTexto = '';
+                let diasDiferenca = 0;
+                
                 if (modoAutomatico && valor) {
                     const checkboxData = item.querySelector(SELETORES.CHECKBOX_DATA_DIVERGENTE);
                     if (checkboxData) {
@@ -401,22 +479,24 @@
                             
                             if (dataBaixa && dataLida) {
                                 const diffTime = Math.abs(dataLida - dataBaixa);
-                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                diasDiferenca = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                                 
                                 console.log('[Chance Agente] 📅 Cálculo de divergência:', {
                                     dataSistema: spanDataBaixa.innerText.trim(),
                                     dataImagem: valor,
-                                    diasDiferenca: diffDays
+                                    diasDiferenca: diasDiferenca
                                 });
                                 
                                 // Inserir quantidade de dias no span
-                                spanDiasDivergencia.textContent = diffDays;
+                                spanDiasDivergencia.textContent = diasDiferenca;
                                 spanDiasDivergencia.style.display = '';
                                 
                                 // Também atualizar o value do checkbox se necessário
-                                checkboxData.value = diffDays;
+                                checkboxData.value = diasDiferenca;
                                 
-                                console.log('[Chance Agente] 📝 Marcando checkbox: Data Divergente (' + diffDays + ' dias)');
+                                diasTexto = ` (${diasDiferenca} ${diasDiferenca === 1 ? 'dia' : 'dias'} de diferença)`;
+                                
+                                console.log('[Chance Agente] 📝 Marcando checkbox: Data Divergente (' + diasDiferenca + ' dias)');
                             }
                         }
                     }
@@ -425,11 +505,31 @@
                 } else {
                     console.log('[Chance Agente] ⚠️ Valor da data não encontrado na resposta');
                 }
+                
+                // Criar badge de diagnóstico
+                const diagnostico = document.createElement('div');
+                diagnostico.className = 'diagnostico-ia alerta';
+                diagnostico.innerHTML = `
+                    <div class="titulo">⚠️ Data Divergente</div>
+                    <div class="detalhes">Sistema: ${item.querySelector(SELETORES.DATA_BAIXA)?.innerText || 'N/A'}<br>
+                    Imagem: ${valor}${diasTexto}</div>
+                `;
+                item.appendChild(diagnostico);
+                
                 break;
             }
             
             default: {
                 console.log('[Chance Agente] ❓ Código desconhecido recebido:', codigo);
+                
+                // Criar badge de diagnóstico para erro desconhecido
+                const diagnostico = document.createElement('div');
+                diagnostico.className = 'diagnostico-ia erro';
+                diagnostico.innerHTML = `
+                    <div class="titulo">❓ Resposta Inesperada</div>
+                    <div class="detalhes">Código: ${codigo}</div>
+                `;
+                item.appendChild(diagnostico);
                 break;
             }
         }
