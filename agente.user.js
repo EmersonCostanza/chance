@@ -20,15 +20,17 @@
     
     // IMPORTANTE: Ajuste estes seletores CSS inspecionando a página (F12)
     const SELETORES = {
-        CONTAINER_ITEM: '.item-auditoria', // Container de cada item de entrega
-        DATA_BAIXA: '.data-baixa-texto', // Elemento com a data de baixa
-        IMAGEM_CANHOTO: 'img.canhoto', // Tag <img> do canhoto
-        CHECKBOX_CAMPO_BRANCO: 'input[name="campo_branco"]',
-        CHECKBOX_PROBLEMA_IMAGEM: 'input[name="problema_imagem"]',
-        CHECKBOX_DATA_DIVERGENTE: 'input[name="data_divergente"]',
-        INPUT_CALENDARIO: 'input.calendario-data',
-        BOTAO_GRAVAR_TODOS: 'button.gravar-todos',
-        BOTAO_PROXIMA_PAGINA: 'a.proxima-pagina'
+        CONTAINER_ITEM: '.row.canhoto', // Container de cada item de entrega
+        DATA_BAIXA: 'span[id^="dataBaixa_"]', // Elemento com a data de baixa (ID dinâmico: dataBaixa_0, dataBaixa_1, etc)
+        IMAGEM_CANHOTO: 'img[id^="img_"]', // Tag <img> do canhoto (ID dinâmico: img_0, img_1, etc)
+        CHECKBOX_OK: 'input[id^="idchecklist3_"]', // Checkbox "OK" (value="3")
+        CHECKBOX_CAMPO_BRANCO: 'input[id^="idchecklist4_"]', // Campo em Branco (value="4")
+        CHECKBOX_CAMPO_ILEGIVEL: 'input[id^="idchecklist5_"]', // Campo Ilegível (value="5")
+        CHECKBOX_DATA_DIVERGENTE: 'input[id^="idchecklist6_"]', // Data Divergente
+        SPAN_DIAS_DIVERGENCIA: 'span[id^="id_qtd_dias_divergencia_"]', // Span para inserir qtd de dias divergentes
+        CHECKBOX_PROBLEMA_IMAGEM: 'input[id^="idchecklist7_"]', // Problema na imagem (value="7")
+        BOTAO_GRAVAR_TODOS: 'button[onclick="GravarTudo()"]', // Botão "Gravar Todos"
+        BOTAO_LISTAR_NOVAMENTE: 'button[onclick="Recarregar()"]' // Botão "Listar Novamente"
     };
 
     // ========== CSS (Feedback Visual) ==========
@@ -307,50 +309,88 @@
         
         switch(codigo) {
             case 'OK': {
-                // Tudo certo - adiciona feedback visual
+                // Tudo certo - NÃO marca nada, apenas feedback visual
                 item.classList.add('auditoria-item-ok');
                 const feedback = document.createElement('div');
                 feedback.className = 'feedback-ok-checklist';
                 feedback.textContent = 'Verificado';
                 item.style.position = 'relative';
                 item.appendChild(feedback);
+                // Não marca nenhum checkbox quando está OK
                 break;
             }
                 
-            case 'ERRO_DADOS':
-            case 'ERRO_IMAGEM': {
-                // Marcar checkbox de campo em branco/ilegível
+            case 'ERRO_DADOS': {
+                // Marcar checkbox de campo em branco OU ilegível
                 item.classList.add('auditoria-item-erro');
-                const checkboxErro = item.querySelector(
-                    codigo === 'ERRO_DADOS' ? SELETORES.CHECKBOX_CAMPO_BRANCO : SELETORES.CHECKBOX_PROBLEMA_IMAGEM
-                );
-                if (checkboxErro && modoAutomatico) {
-                    checkboxErro.click();
+                if (modoAutomatico) {
+                    // Marca campo em branco por padrão
+                    const checkboxCampoBranco = item.querySelector(SELETORES.CHECKBOX_CAMPO_BRANCO);
+                    if (checkboxCampoBranco) {
+                        checkboxCampoBranco.click();
+                    }
+                }
+                break;
+            }
+            
+            case 'ERRO_IMAGEM': {
+                // Marcar checkbox de problema na imagem
+                item.classList.add('auditoria-item-erro');
+                if (modoAutomatico) {
+                    const checkboxImagem = item.querySelector(SELETORES.CHECKBOX_PROBLEMA_IMAGEM);
+                    if (checkboxImagem) {
+                        checkboxImagem.click();
+                    }
                 }
                 break;
             }
                 
             case 'DATA_DIVERGENTE': {
-                // Marcar data divergente e preencher calendário
+                // Marcar data divergente e calcular dias
                 item.classList.add('auditoria-item-erro');
-                const checkboxData = item.querySelector(SELETORES.CHECKBOX_DATA_DIVERGENTE);
                 
-                if (checkboxData) {
-                    if (modoAutomatico) {
+                if (modoAutomatico && valor) {
+                    const checkboxData = item.querySelector(SELETORES.CHECKBOX_DATA_DIVERGENTE);
+                    if (checkboxData) {
                         checkboxData.click();
                         
-                        // Aguardar calendário aparecer
-                        waitForElement(SELETORES.INPUT_CALENDARIO, (inputCalendario) => {
-                            if (valor) {
-                                inputCalendario.value = valor;
-                                inputCalendario.dispatchEvent(new Event('change', { bubbles: true }));
+                        // Calcular dias de divergência
+                        const spanDataBaixa = item.querySelector(SELETORES.DATA_BAIXA);
+                        const spanDiasDivergencia = item.querySelector(SELETORES.SPAN_DIAS_DIVERGENCIA);
+                        
+                        if (spanDataBaixa && spanDiasDivergencia) {
+                            const dataBaixa = parseDataBrasileira(spanDataBaixa.innerText.trim());
+                            const dataLida = parseDataBrasileira(valor);
+                            
+                            if (dataBaixa && dataLida) {
+                                const diffTime = Math.abs(dataLida - dataBaixa);
+                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                
+                                // Inserir quantidade de dias no span
+                                spanDiasDivergencia.textContent = diffDays;
+                                spanDiasDivergencia.style.display = '';
+                                
+                                // Também atualizar o value do checkbox se necessário
+                                checkboxData.value = diffDays;
                             }
-                        });
+                        }
                     }
                 }
                 break;
             }
         }
+    }
+    
+    // Função auxiliar para converter data brasileira (DD/MM/AAAA) em objeto Date
+    function parseDataBrasileira(dataStr) {
+        const partes = dataStr.split('/');
+        if (partes.length === 3) {
+            const dia = parseInt(partes[0], 10);
+            const mes = parseInt(partes[1], 10) - 1; // Mês em JS é 0-11
+            const ano = parseInt(partes[2], 10);
+            return new Date(ano, mes, dia);
+        }
+        return null;
     }
 
     function finalizarItem() {
