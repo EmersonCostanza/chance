@@ -217,23 +217,24 @@
         
         /* Badge de diagnóstico da IA - CHECKLIST INDIVIDUAL */
         .diagnostico-ia {
-            position: absolute !important;
-            top: 10px !important;
-            right: 10px !important;
+            position: fixed !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
             background: white !important;
             color: #333 !important;
             padding: 15px !important;
             border-radius: 10px !important;
             font-weight: normal !important;
             font-size: 13px !important;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
-            border: 2px solid !important;
-            z-index: 99999 !important;
-            min-width: 280px !important;
-            max-width: 320px !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+            border: 3px solid !important;
+            z-index: 1000001 !important;
+            min-width: 300px !important;
+            max-width: 350px !important;
             line-height: 1.5 !important;
             display: block !important;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            pointer-events: none !important;
         }
         
         .diagnostico-ia.ok {
@@ -716,7 +717,11 @@
                     // Criar badge de erro de API
                     const diagnostico = document.createElement('div');
                     diagnostico.className = 'diagnostico-ia erro';
-                    diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                    
+                    const rect = item.getBoundingClientRect();
+                    const badgeTop = rect.top + window.scrollY;
+                    
+                    diagnostico.style.cssText = `position: fixed !important; top: ${badgeTop}px !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 1000001 !important; display: block !important;`;
                     diagnostico.innerHTML = `
                         <div class="titulo">❌ Erro na API</div>
                         <div class="detalhes">Falha ao comunicar com servidor: ${error.message}</div>
@@ -725,6 +730,14 @@
                         item.style.position = 'relative';
                     }
                     item.appendChild(diagnostico);
+                    
+                    // Atualizar posição ao rolar a página
+                    const atualizarPosicao = () => {
+                        const newRect = item.getBoundingClientRect();
+                        diagnostico.style.top = `${newRect.top + window.scrollY}px`;
+                    };
+                    window.addEventListener('scroll', atualizarPosicao);
+                    window.addEventListener('resize', atualizarPosicao);
                 }
                 finalizarItem();
             },
@@ -801,13 +814,16 @@
             checkboxMarcado: null
         };
         
-        // Garantir que o item tenha position relative
-        if (window.getComputedStyle(item).position === 'static') {
-            item.style.position = 'relative';
-        }
+        // Calcular posição do badge alinhado à row
+        const rect = item.getBoundingClientRect();
+        const badgeTop = rect.top + window.scrollY;
         
         console.log('[Chance Agente] 📦 Elemento item:', item);
-        console.log('[Chance Agente] 🎨 Position atual:', window.getComputedStyle(item).position);
+        console.log('[Chance Agente] 📍 Posição da row:', {
+            top: rect.top,
+            scrollY: window.scrollY,
+            badgeTop: badgeTop
+        });
         
         switch(codigo) {
             case 'OK': {
@@ -818,7 +834,7 @@
                 // Criar badge de diagnóstico com checklist
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia ok';
-                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = `position: fixed !important; top: ${badgeTop}px !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 1000001 !important; display: block !important;`;
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -844,6 +860,14 @@
                 console.log('[Chance Agente] ✅ Badge OK adicionado:', diagnostico);
                 console.log('[Chance Agente] 📍 Badge está visível?', diagnostico.offsetParent !== null);
                 
+                // Atualizar posição ao rolar a página
+                const atualizarPosicao = () => {
+                    const newRect = item.getBoundingClientRect();
+                    diagnostico.style.top = `${newRect.top + window.scrollY}px`;
+                };
+                window.addEventListener('scroll', atualizarPosicao);
+                window.addEventListener('resize', atualizarPosicao);
+                
                 resultado.checkboxMarcado = 'Nenhum (aprovado)';
                 
                 // Não marca nenhum checkbox quando está OK
@@ -858,7 +882,7 @@
                 // Criar badge de diagnóstico com checklist
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = `position: fixed !important; top: ${badgeTop}px !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 1000001 !important; display: block !important;`;
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -886,6 +910,14 @@
                 
                 console.log('[Chance Agente] ❌ Badge ERRO adicionado:', diagnostico);
                 
+                // Atualizar posição ao rolar a página
+                const atualizarPosicao = () => {
+                    const newRect = item.getBoundingClientRect();
+                    diagnostico.style.top = `${newRect.top + window.scrollY}px`;
+                };
+                window.addEventListener('scroll', atualizarPosicao);
+                window.addEventListener('resize', atualizarPosicao);
+                
                 if (modoAutomatico) {
                     console.log('[Chance Agente] 📝 Marcando checkbox: Campo em Branco');
                     // Marca campo em branco por padrão
@@ -909,7 +941,7 @@
                 // Criar badge de diagnóstico com checklist
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = `position: fixed !important; top: ${badgeTop}px !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 1000001 !important; display: block !important;`;
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -936,6 +968,14 @@
                 item.appendChild(diagnostico);
                 
                 console.log('[Chance Agente] ❌ Badge ERRO_IMAGEM adicionado');
+                
+                // Atualizar posição ao rolar a página
+                const atualizarPosicao = () => {
+                    const newRect = item.getBoundingClientRect();
+                    diagnostico.style.top = `${newRect.top + window.scrollY}px`;
+                };
+                window.addEventListener('scroll', atualizarPosicao);
+                window.addEventListener('resize', atualizarPosicao);
                 
                 if (modoAutomatico) {
                     console.log('[Chance Agente] 📝 Marcando checkbox: Problema na Imagem');
@@ -1007,7 +1047,7 @@
                 // Criar badge de diagnóstico
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia alerta';
-                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = `position: fixed !important; top: ${badgeTop}px !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 1000001 !important; display: block !important;`;
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -1037,6 +1077,14 @@
                 
                 console.log('[Chance Agente] ⚠️ Badge DATA_DIVERGENTE adicionado');
                 
+                // Atualizar posição ao rolar a página
+                const atualizarPosicao = () => {
+                    const newRect = item.getBoundingClientRect();
+                    diagnostico.style.top = `${newRect.top + window.scrollY}px`;
+                };
+                window.addEventListener('scroll', atualizarPosicao);
+                window.addEventListener('resize', atualizarPosicao);
+                
                 break;
             }
             
@@ -1048,7 +1096,7 @@
                 // Criar badge de diagnóstico para erro desconhecido
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = `position: fixed !important; top: ${badgeTop}px !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 1000001 !important; display: block !important;`;
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -1073,6 +1121,15 @@
                     </div>
                 `;
                 item.appendChild(diagnostico);
+                
+                // Atualizar posição ao rolar a página
+                const atualizarPosicao = () => {
+                    const newRect = item.getBoundingClientRect();
+                    diagnostico.style.top = `${newRect.top + window.scrollY}px`;
+                };
+                window.addEventListener('scroll', atualizarPosicao);
+                window.addEventListener('resize', atualizarPosicao);
+                
                 break;
             }
         }
