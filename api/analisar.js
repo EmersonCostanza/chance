@@ -89,9 +89,63 @@ RESPONDA EXATAMENTE NESTE FORMATO JSON (sem \`\`\`json, apenas o JSON puro):
   "recebedor_nome": "nome ou Sem nome"
 }`;
 
-    const result = await model.generateContent([prompt, imagePart]);
-    const response = await result.response;
-    let respostaIA = response.text().trim();
+    // Sistema de retry com backoff exponencial
+    const MAX_RETRIES = 3;
+    let tentativa = 0;
+    let respostaIA = null;
+    let ultimoErro = null;
+    
+    while (tentativa < MAX_RETRIES && !respostaIA) {
+      try {
+        if (tentativa > 0) {
+          // Backoff exponencial: 2s, 4s, 8s
+          const delayMs = Math.pow(2, tentativa) * 1000;
+          console.log(`⏳ Tentativa ${tentativa + 1}/${MAX_RETRIES} - Aguardando ${delayMs}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+        
+        console.log(`🚀 Chamando Gemini API (tentativa ${tentativa + 1}/${MAX_RETRIES})...`);
+        const result = await model.generateContent([prompt, imagePart]);
+        const response = await result.response;
+        respostaIA = response.text().trim();
+        
+        console.log('✅ Resposta recebida com sucesso');
+        break; // Sucesso, sair do loop
+        
+      } catch (apiError) {
+        ultimoErro = apiError;
+        tentativa++;
+        
+        console.error(`❌ Erro na tentativa ${tentativa}/${MAX_RETRIES}:`, apiError.message);
+        
+        // Se for erro 503 (overloaded) e ainda há tentativas, continuar
+        if (apiError.message.includes('503') || apiError.message.includes('overloaded')) {
+          if (tentativa < MAX_RETRIES) {
+            console.log('🔄 API sobrecarregada, tentando novamente...');
+            continue;
+          }
+        } else {
+          // Outro tipo de erro, não vale a pena tentar de novo
+          console.error('💥 Erro não recuperável:', apiError.message);
+          break;
+        }
+      }
+    }
+    
+    // Se todas as tentativas falharam, retornar erro estruturado
+    if (!respostaIA) {
+      console.error('⛔ Todas as tentativas falharam');
+      return res.status(503).json({
+        error: ultimoErro ? ultimoErro.message : 'Serviço temporariamente indisponível',
+        resposta: 'ERRO_API_SOBRECARREGADA',
+        tentativas: tentativa,
+        canhoto_status: "Erro API",
+        assinatura_nome: "Erro API",
+        data_entrega: "Erro",
+        documento_status: "Erro API",
+        recebedor_nome: "Erro API"
+      });
+    }
     
     // Remover marcadores de código se a IA incluir
     respostaIA = respostaIA.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();

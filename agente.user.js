@@ -787,7 +787,9 @@
         // Determinar o código de status baseado na análise
         let codigo = '';
         
-        if (!canhotoslegivel) {
+        if (analiseIA.resposta === 'ERRO_API_SOBRECARREGADA' || analiseIA.resposta === 'ERRO_SISTEMA') {
+            codigo = 'ERRO_API';
+        } else if (!canhotoslegivel) {
             codigo = 'SEM_CANHOTO';
         } else if (!datasIguais && dataEntrega !== 'Erro') {
             codigo = 'DATA_DIVERGENTE';
@@ -1029,6 +1031,53 @@
                     }
                 } else {
                     resultado.checkboxMarcado = 'Problema na Imagem (não marcado - modo manual)';
+                }
+                break;
+            }
+            
+            case 'ERRO_API': {
+                // Erro na comunicação com a API (503, timeout, etc)
+                console.log('[Chance Agente] ⚠️ Erro: API sobrecarregada ou indisponível');
+                item.classList.add('auditoria-item-erro');
+                
+                // Criar badge de diagnóstico
+                const diagnostico = document.createElement('div');
+                diagnostico.className = 'diagnostico-ia alerta';
+                diagnostico.innerHTML = `
+                    <div class="titulo-badge">⚠️ Erro na API</div>
+                    <div class="checklist">
+                        <div class="checklist-item">
+                            <span class="icon">⏳</span>
+                            <span>Serviço temporariamente sobrecarregado</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">🔄</span>
+                            <span>Tentativas realizadas: ${analiseIA.tentativas || 'N/A'}</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">💡</span>
+                            <span>Tente novamente em alguns minutos</span>
+                        </div>
+                    </div>
+                    <div class="resultado" style="color: #996600;">
+                        ⚠️ API Google Gemini indisponível
+                    </div>
+                    <div class="checkbox-info">
+                        ${analiseIA.error || 'Serviço sobrecarregado'}<br>
+                        ${modoAutomatico ? '✓ Problema na imagem selecionado (temporário)' : 'Problema na imagem (não marcado)'}
+                    </div>
+                `;
+                item.appendChild(diagnostico);
+                
+                if (modoAutomatico) {
+                    console.log('[Chance Agente] 📝 Marcando checkbox: Problema na Imagem (erro temporário)');
+                    const checkboxImagem = item.querySelector(SELETORES.CHECKBOX_PROBLEMA_IMAGEM);
+                    if (checkboxImagem) {
+                        checkboxImagem.click();
+                        resultado.checkboxMarcado = 'Problema na Imagem (erro API)';
+                    }
+                } else {
+                    resultado.checkboxMarcado = 'Problema na Imagem (não marcado - erro API)';
                 }
                 break;
             }
