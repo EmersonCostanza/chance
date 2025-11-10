@@ -124,52 +124,86 @@
             font-size: 18px;
         }
         
-        /* Badge de diagnóstico da IA */
+        /* Badge de diagnóstico da IA - CHECKLIST INDIVIDUAL */
         .diagnostico-ia {
             position: absolute !important;
-            top: 10px !important;
-            left: 10px !important;
+            bottom: 10px !important;
+            right: 10px !important;
             background: white !important;
             color: #333 !important;
-            padding: 12px 16px !important;
-            border-radius: 8px !important;
-            font-weight: bold !important;
+            padding: 15px !important;
+            border-radius: 10px !important;
+            font-weight: normal !important;
             font-size: 13px !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-            border-left: 4px solid !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+            border: 2px solid !important;
             z-index: 99999 !important;
-            max-width: 300px !important;
-            line-height: 1.4 !important;
+            min-width: 280px !important;
+            max-width: 320px !important;
+            line-height: 1.5 !important;
             display: block !important;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
         }
         
         .diagnostico-ia.ok {
-            border-left-color: #00FF00;
-            background: linear-gradient(to right, #e8ffe8, white);
+            border-color: #00cc00 !important;
+            background: linear-gradient(135deg, #e8ffe8, #f0fff0) !important;
         }
         
         .diagnostico-ia.erro {
-            border-left-color: #FF0000;
-            background: linear-gradient(to right, #ffe8e8, white);
+            border-color: #ff0000 !important;
+            background: linear-gradient(135deg, #ffe8e8, #fff0f0) !important;
         }
         
         .diagnostico-ia.alerta {
-            border-left-color: #FFA500;
-            background: linear-gradient(to right, #fff4e8, white);
+            border-color: #ff9900 !important;
+            background: linear-gradient(135deg, #fff4e8, #fffaf0) !important;
         }
         
-        .diagnostico-ia .titulo {
-            font-size: 14px;
-            margin-bottom: 4px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        .diagnostico-ia .titulo-badge {
+            font-size: 15px !important;
+            font-weight: bold !important;
+            margin-bottom: 12px !important;
+            padding-bottom: 8px !important;
+            border-bottom: 2px solid rgba(0,0,0,0.1) !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
         }
         
-        .diagnostico-ia .detalhes {
-            font-size: 12px;
-            font-weight: normal;
-            color: #666;
+        .diagnostico-ia .checklist {
+            margin: 10px 0 !important;
+        }
+        
+        .diagnostico-ia .checklist-item {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            padding: 5px 0 !important;
+            font-size: 13px !important;
+        }
+        
+        .diagnostico-ia .checklist-item .icon {
+            font-size: 16px !important;
+            min-width: 20px !important;
+        }
+        
+        .diagnostico-ia .resultado {
+            margin-top: 12px !important;
+            padding-top: 12px !important;
+            border-top: 2px solid rgba(0,0,0,0.1) !important;
+            font-weight: bold !important;
+            font-size: 14px !important;
+            text-align: center !important;
+        }
+        
+        .diagnostico-ia .checkbox-info {
+            margin-top: 8px !important;
+            padding: 8px !important;
+            background: rgba(0,0,0,0.05) !important;
+            border-radius: 5px !important;
+            font-size: 12px !important;
+            text-align: center !important;
         }
         
         /* Badge de Resumo da Auditoria */
@@ -535,13 +569,29 @@
                 console.log('[Chance Agente] ✅ Status: OK - Nenhum erro detectado');
                 item.classList.add('auditoria-item-ok');
                 
-                // Criar badge de diagnóstico
+                // Criar badge de diagnóstico com checklist
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia ok';
-                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
-                    <div class="titulo">✅ Verificado pela IA</div>
-                    <div class="detalhes">Data correta e legível</div>
+                    <div class="titulo-badge">🤖 Auditoria da IA</div>
+                    <div class="checklist">
+                        <div class="checklist-item">
+                            <span class="icon">✅</span>
+                            <span>Data de Baixa: OK</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">✅</span>
+                            <span>Assinatura: OK</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">✅</span>
+                            <span>Imagem do Canhoto: OK</span>
+                        </div>
+                    </div>
+                    <div class="resultado" style="color: #006600;">
+                        ✅ Resultado: OK, pode gravar
+                    </div>
                 `;
                 item.appendChild(diagnostico);
                 
@@ -559,13 +609,32 @@
                 console.log('[Chance Agente] ⚠️ Erro detectado: Dados ausentes ou ilegíveis na imagem');
                 item.classList.add('auditoria-item-erro');
                 
-                // Criar badge de diagnóstico
+                // Criar badge de diagnóstico com checklist
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
-                    <div class="titulo">❌ Problema Detectado</div>
-                    <div class="detalhes">Data não encontrada ou ilegível na imagem</div>
+                    <div class="titulo-badge">🤖 Auditoria da IA</div>
+                    <div class="checklist">
+                        <div class="checklist-item">
+                            <span class="icon">❌</span>
+                            <span>Data de Baixa: Ilegível/Ausente</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">❌</span>
+                            <span>Assinatura: Ilegível/Ausente</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">⚠️</span>
+                            <span>Imagem do Canhoto: Legível</span>
+                        </div>
+                    </div>
+                    <div class="resultado" style="color: #cc0000;">
+                        ❌ Resultado: Erro detectado
+                    </div>
+                    <div class="checkbox-info">
+                        ${modoAutomatico ? '✓ Campo em Branco selecionado' : 'Campo em Branco (não marcado)'}
+                    </div>
                 `;
                 item.appendChild(diagnostico);
                 
@@ -591,13 +660,32 @@
                 console.log('[Chance Agente] ⚠️ Erro detectado: Problema na qualidade/visualização da imagem');
                 item.classList.add('auditoria-item-erro');
                 
-                // Criar badge de diagnóstico
+                // Criar badge de diagnóstico com checklist
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
-                    <div class="titulo">❌ Problema na Imagem</div>
-                    <div class="detalhes">Imagem com qualidade ruim ou não carregou</div>
+                    <div class="titulo-badge">🤖 Auditoria da IA</div>
+                    <div class="checklist">
+                        <div class="checklist-item">
+                            <span class="icon">⚠️</span>
+                            <span>Data de Baixa: Não verificável</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">⚠️</span>
+                            <span>Assinatura: Não verificável</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">❌</span>
+                            <span>Imagem do Canhoto: Erro</span>
+                        </div>
+                    </div>
+                    <div class="resultado" style="color: #cc0000;">
+                        ❌ Resultado: Problema na imagem
+                    </div>
+                    <div class="checkbox-info">
+                        ${modoAutomatico ? '✓ Problema na imagem selecionado' : 'Problema na imagem (não marcado)'}
+                    </div>
                 `;
                 item.appendChild(diagnostico);
                 
@@ -673,11 +761,31 @@
                 // Criar badge de diagnóstico
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia alerta';
-                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
-                    <div class="titulo">⚠️ Data Divergente</div>
-                    <div class="detalhes">Sistema: ${item.querySelector(SELETORES.DATA_BAIXA)?.innerText || 'N/A'}<br>
-                    Imagem: ${valor}${diasTexto}</div>
+                    <div class="titulo-badge">🤖 Auditoria da IA</div>
+                    <div class="checklist">
+                        <div class="checklist-item">
+                            <span class="icon">⚠️</span>
+                            <span>Data de Baixa: Divergente</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">✅</span>
+                            <span>Assinatura: OK</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">✅</span>
+                            <span>Imagem do Canhoto: OK</span>
+                        </div>
+                    </div>
+                    <div class="resultado" style="color: #996600;">
+                        ⚠️ Resultado: Data divergente
+                    </div>
+                    <div class="checkbox-info">
+                        Sistema: ${item.querySelector(SELETORES.DATA_BAIXA)?.innerText || 'N/A'}<br>
+                        Imagem: ${valor}${diasTexto ? '<br>' + diasTexto : ''}<br>
+                        ${modoAutomatico ? '✓ Data Divergente selecionado' : 'Data Divergente (não marcado)'}
+                    </div>
                 `;
                 item.appendChild(diagnostico);
                 
@@ -694,10 +802,29 @@
                 // Criar badge de diagnóstico para erro desconhecido
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
-                    <div class="titulo">❓ Resposta Inesperada</div>
-                    <div class="detalhes">Código: ${codigo}</div>
+                    <div class="titulo-badge">🤖 Auditoria da IA</div>
+                    <div class="checklist">
+                        <div class="checklist-item">
+                            <span class="icon">❓</span>
+                            <span>Data de Baixa: Não analisado</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">❓</span>
+                            <span>Assinatura: Não analisado</span>
+                        </div>
+                        <div class="checklist-item">
+                            <span class="icon">❓</span>
+                            <span>Imagem do Canhoto: Não analisado</span>
+                        </div>
+                    </div>
+                    <div class="resultado" style="color: #cc0000;">
+                        ❌ Resultado: Resposta inesperada
+                    </div>
+                    <div class="checkbox-info">
+                        Código recebido: ${codigo}
+                    </div>
                 `;
                 item.appendChild(diagnostico);
                 break;
