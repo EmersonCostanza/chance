@@ -10,14 +10,14 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
-// @connect      chance.vercel.app
+// @connect      chance-rho.vercel.app
 // ==/UserScript==
 
 (function() {
     'use strict';
 
     // ========== CONFIGURAÇÃO ==========
-    const API_URL = 'https://chance.vercel.app/api/analisar';
+    const API_URL = 'https://chance-rho.vercel.app/api/analisar';
     
     // IMPORTANTE: Ajuste estes seletores CSS inspecionando a página (F12)
     const SELETORES = {
