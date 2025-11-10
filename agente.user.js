@@ -638,9 +638,11 @@
                     }),
                     onload: function(response) {
                         console.log(`[Agente] Item ${index + 1}: Resposta recebida`, response.status);
+                        console.log(`[Agente] Item ${index + 1}: Texto da resposta:`, response.responseText);
                         
                         try {
                             const resultado = JSON.parse(response.responseText);
+                            console.log(`[Agente] Item ${index + 1}: JSON parseado:`, resultado);
                             
                             if (response.status === 200 && resultado.status === 'success') {
                                 // Sucesso
@@ -673,17 +675,53 @@
                                 }
                                 
                             } else {
-                                throw new Error(resultado.message || 'Erro desconhecido');
+                                // Erro estruturado da API (503, 500, etc)
+                                const mensagemErro = resultado.resposta || resultado.error || 'Erro desconhecido';
+                                const tentativas = resultado.tentativas || 0;
+                                
+                                let icone = '❌';
+                                let titulo = 'Erro';
+                                
+                                if (resultado.resposta === 'ERRO_API_SOBRECARREGADA') {
+                                    icone = '⚠️';
+                                    titulo = `API Sobrecarregada (${tentativas} tentativas)`;
+                                } else if (response.status >= 500) {
+                                    icone = '🔥';
+                                    titulo = `Erro Servidor (${response.status})`;
+                                }
+                                
+                                badge.className = 'badge-status-ia erro';
+                                badge.querySelector('.badge-header').innerHTML = `
+                                    <div class="badge-titulo">
+                                        <span class="icone">${icone}</span>
+                                        <span class="texto">${titulo}</span>
+                                    </div>
+                                    <button class="btn-minimizar">📋</button>
+                                `;
+                                
+                                badge.querySelector('.btn-minimizar').addEventListener('click', function(event) {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    event.stopImmediatePropagation();
+                                    badge.classList.toggle('minimizado');
+                                    badge.querySelector('.badge-json').classList.toggle('visivel');
+                                });
+                                
+                                badge.querySelector('.badge-json').textContent = JSON.stringify(resultado, null, 2);
+                                console.warn(`[Agente] Item ${index + 1}: ${titulo}`, resultado);
                             }
                             
                         } catch (error) {
                             // Erro no processamento
                             console.error(`[Agente] Item ${index + 1}: Erro`, error);
+                            console.error(`[Agente] Item ${index + 1}: Response status:`, response.status);
+                            console.error(`[Agente] Item ${index + 1}: Response text:`, response.responseText);
+                            
                             badge.className = 'badge-status-ia erro';
                             badge.querySelector('.badge-header').innerHTML = `
                                 <div class="badge-titulo">
                                     <span class="icone">❌</span>
-                                    <span class="texto">Erro</span>
+                                    <span class="texto">Erro (${response.status})</span>
                                 </div>
                                 <button class="btn-minimizar">📋</button>
                             `;
@@ -696,10 +734,20 @@
                                 badge.querySelector('.badge-json').classList.toggle('visivel');
                             });
                             
-                            badge.querySelector('.badge-json').textContent = JSON.stringify({
-                                error: error.message,
-                                response: response.responseText
-                            }, null, 2);
+                            // Tentar mostrar o JSON de erro ou a resposta bruta
+                            let errorDisplay;
+                            try {
+                                const errorJson = JSON.parse(response.responseText);
+                                errorDisplay = JSON.stringify(errorJson, null, 2);
+                            } catch (e) {
+                                errorDisplay = JSON.stringify({
+                                    error: error.message,
+                                    status: response.status,
+                                    responseText: response.responseText
+                                }, null, 2);
+                            }
+                            
+                            badge.querySelector('.badge-json').textContent = errorDisplay;
                         }
                     },
                     onerror: function(error) {
