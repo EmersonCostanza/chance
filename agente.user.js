@@ -103,16 +103,16 @@
         /* Painel de Logs JSON */
         #painel-logs {
             position: fixed;
-            top: 80px;
-            right: 20px;
+            top: 20px;
+            left: 20px;
             background: #1e1e1e;
             color: #d4d4d4;
             padding: 15px;
             border-radius: 10px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-            z-index: 999998;
+            z-index: 1000000;
             width: 500px;
-            max-height: 600px;
+            max-height: 80vh;
             overflow-y: auto;
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 12px;
@@ -126,8 +126,9 @@
         #painel-logs h4 {
             margin: 0 0 10px 0;
             color: #4ec9b0;
-            font-size: 14px;
-            border-bottom: 1px solid #333;
+            font-size: 16px;
+            font-weight: bold;
+            border-bottom: 2px solid #4ec9b0;
             padding-bottom: 8px;
         }
         
@@ -138,20 +139,41 @@
             overflow-x: auto;
             margin: 5px 0;
             border-left: 3px solid #4ec9b0;
+            color: #ce9178;
+            line-height: 1.4;
         }
         
         #painel-logs .log-item {
             margin-bottom: 15px;
-            padding: 10px;
+            padding: 12px;
             background: #2d2d30;
-            border-radius: 5px;
-            border-left: 3px solid #569cd6;
+            border-radius: 8px;
+            border-left: 4px solid #569cd6;
         }
         
         #painel-logs .log-timestamp {
-            color: #858585;
+            color: #dcdcaa;
             font-size: 11px;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        
+        #painel-logs::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        #painel-logs::-webkit-scrollbar-track {
+            background: #1e1e1e;
+            border-radius: 5px;
+        }
+        
+        #painel-logs::-webkit-scrollbar-thumb {
+            background: #4ec9b0;
+            border-radius: 5px;
+        }
+        
+        #painel-logs::-webkit-scrollbar-thumb:hover {
+            background: #569cd6;
         }
         
         /* Feedback nos itens */
@@ -196,8 +218,8 @@
         /* Badge de diagnóstico da IA - CHECKLIST INDIVIDUAL */
         .diagnostico-ia {
             position: absolute !important;
-            top: 10px !important;
-            left: 10px !important;
+            bottom: 10px !important;
+            right: 10px !important;
             background: white !important;
             color: #333 !important;
             padding: 15px !important;
@@ -694,7 +716,7 @@
                     // Criar badge de erro de API
                     const diagnostico = document.createElement('div');
                     diagnostico.className = 'diagnostico-ia erro';
-                    diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
+                    diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                     diagnostico.innerHTML = `
                         <div class="titulo">❌ Erro na API</div>
                         <div class="detalhes">Falha ao comunicar com servidor: ${error.message}</div>
@@ -796,7 +818,7 @@
                 // Criar badge de diagnóstico com checklist
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia ok';
-                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -836,7 +858,7 @@
                 // Criar badge de diagnóstico com checklist
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -887,7 +909,7 @@
                 // Criar badge de diagnóstico com checklist
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -985,7 +1007,7 @@
                 // Criar badge de diagnóstico
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia alerta';
-                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
@@ -1026,7 +1048,7 @@
                 // Criar badge de diagnóstico para erro desconhecido
                 const diagnostico = document.createElement('div');
                 diagnostico.className = 'diagnostico-ia erro';
-                diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
+                diagnostico.style.cssText = 'position: absolute !important; bottom: 10px !important; right: 10px !important; z-index: 99999 !important; display: block !important;';
                 diagnostico.innerHTML = `
                     <div class="titulo-badge">🤖 Auditoria da IA</div>
                     <div class="checklist">
