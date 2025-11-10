@@ -283,6 +283,11 @@
     }
 
     function chamarApiVercel(item, dataDeBaixa, imagemBase64) {
+        console.log('[Chance Agente] 📤 Enviando para API:', {
+            dataDeBaixa: dataDeBaixa,
+            tamanhoImagem: imagemBase64.length
+        });
+        
         GM_xmlhttpRequest({
             method: 'POST',
             url: API_URL,
@@ -296,16 +301,18 @@
             onload: function(response) {
                 try {
                     const resultado = JSON.parse(response.responseText);
+                    console.log('[Chance Agente] 📥 Resposta da IA:', resultado.resposta);
+                    console.log('[Chance Agente] 🔍 Análise completa:', resultado);
                     executarAcao(item, resultado.resposta);
                 } catch (error) {
-                    console.error('Erro ao processar resposta:', error);
+                    console.error('[Chance Agente] ❌ Erro ao processar resposta:', error);
                     item.classList.remove('auditoria-processando');
                     item.classList.add('auditoria-item-erro');
                 }
                 finalizarItem();
             },
             onerror: function(error) {
-                console.error('Erro na requisição:', error);
+                console.error('[Chance Agente] ❌ Erro na requisição:', error);
                 item.classList.remove('auditoria-processando');
                 item.classList.add('auditoria-item-erro');
                 finalizarItem();
@@ -321,9 +328,16 @@
         const codigo = partes[0].trim();
         const valor = partes[1] ? partes[1].trim() : '';
         
+        console.log('[Chance Agente] 🎯 Executando ação:', {
+            codigo: codigo,
+            valor: valor,
+            modoAutomatico: modoAutomatico
+        });
+        
         switch(codigo) {
             case 'OK': {
                 // Tudo certo - NÃO marca nada, apenas feedback visual
+                console.log('[Chance Agente] ✅ Status: OK - Nenhum erro detectado');
                 item.classList.add('auditoria-item-ok');
                 const feedback = document.createElement('div');
                 feedback.className = 'feedback-ok-checklist';
@@ -336,31 +350,40 @@
                 
             case 'ERRO_DADOS': {
                 // Marcar checkbox de campo em branco OU ilegível
+                console.log('[Chance Agente] ⚠️ Erro detectado: Dados ausentes ou ilegíveis na imagem');
                 item.classList.add('auditoria-item-erro');
                 if (modoAutomatico) {
+                    console.log('[Chance Agente] 📝 Marcando checkbox: Campo em Branco');
                     // Marca campo em branco por padrão
                     const checkboxCampoBranco = item.querySelector(SELETORES.CHECKBOX_CAMPO_BRANCO);
                     if (checkboxCampoBranco) {
                         checkboxCampoBranco.click();
                     }
+                } else {
+                    console.log('[Chance Agente] ℹ️ Modo automático desativado - checkbox não será marcado');
                 }
                 break;
             }
             
             case 'ERRO_IMAGEM': {
                 // Marcar checkbox de problema na imagem
+                console.log('[Chance Agente] ⚠️ Erro detectado: Problema na qualidade/visualização da imagem');
                 item.classList.add('auditoria-item-erro');
                 if (modoAutomatico) {
+                    console.log('[Chance Agente] 📝 Marcando checkbox: Problema na Imagem');
                     const checkboxImagem = item.querySelector(SELETORES.CHECKBOX_PROBLEMA_IMAGEM);
                     if (checkboxImagem) {
                         checkboxImagem.click();
                     }
+                } else {
+                    console.log('[Chance Agente] ℹ️ Modo automático desativado - checkbox não será marcado');
                 }
                 break;
             }
                 
             case 'DATA_DIVERGENTE': {
                 // Marcar data divergente e calcular dias
+                console.log('[Chance Agente] ⚠️ Erro detectado: Data divergente encontrada:', valor);
                 item.classList.add('auditoria-item-erro');
                 
                 if (modoAutomatico && valor) {
@@ -380,16 +403,33 @@
                                 const diffTime = Math.abs(dataLida - dataBaixa);
                                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                                 
+                                console.log('[Chance Agente] 📅 Cálculo de divergência:', {
+                                    dataSistema: spanDataBaixa.innerText.trim(),
+                                    dataImagem: valor,
+                                    diasDiferenca: diffDays
+                                });
+                                
                                 // Inserir quantidade de dias no span
                                 spanDiasDivergencia.textContent = diffDays;
                                 spanDiasDivergencia.style.display = '';
                                 
                                 // Também atualizar o value do checkbox se necessário
                                 checkboxData.value = diffDays;
+                                
+                                console.log('[Chance Agente] 📝 Marcando checkbox: Data Divergente (' + diffDays + ' dias)');
                             }
                         }
                     }
+                } else if (!modoAutomatico) {
+                    console.log('[Chance Agente] ℹ️ Modo automático desativado - checkbox não será marcado');
+                } else {
+                    console.log('[Chance Agente] ⚠️ Valor da data não encontrado na resposta');
                 }
+                break;
+            }
+            
+            default: {
+                console.log('[Chance Agente] ❓ Código desconhecido recebido:', codigo);
                 break;
             }
         }
