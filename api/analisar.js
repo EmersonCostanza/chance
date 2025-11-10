@@ -5,9 +5,11 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export default async function handler(req, res) {
-  console.log('========================================');
-  console.log('🚀 API INICIADA:', new Date().toISOString());
-  console.log('========================================');
+  // WRAPPER GLOBAL PARA CAPTURAR QUALQUER ERRO
+  try {
+    console.log('========================================');
+    console.log('🚀 API INICIADA:', new Date().toISOString());
+    console.log('========================================');
   
   // Habilitar CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -80,7 +82,28 @@ export default async function handler(req, res) {
     
     console.log('📊 Informações da imagem:');
     console.log('  - Tamanho base64:', base64Data.length);
+    console.log('  - Tamanho em MB:', (base64Data.length / 1024 / 1024).toFixed(2));
     console.log('  - Primeiros 50 chars:', base64Data.substring(0, 50));
+    
+    // Verificar tamanho máximo (10MB em base64 = ~7.5MB de imagem)
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (base64Data.length > MAX_SIZE) {
+      console.log('❌ ERRO: Imagem muito grande!', {
+        tamanho: base64Data.length,
+        maximo: MAX_SIZE,
+        tamanho_mb: (base64Data.length / 1024 / 1024).toFixed(2)
+      });
+      return res.status(400).json({
+        error: `Imagem muito grande: ${(base64Data.length / 1024 / 1024).toFixed(2)}MB (máximo: 7.5MB)`,
+        resposta: 'ERRO_DADOS',
+        tentativas: 0,
+        canhoto_status: "Erro",
+        assinatura_nome: "Erro",
+        data_entrega: "Erro",
+        documento_status: "Erro",
+        recebedor_nome: "Erro"
+      });
+    }
     
     const imagePart = {
       inlineData: {
@@ -311,6 +334,30 @@ RESPONDA EXATAMENTE NESTE FORMATO JSON (sem \`\`\`json, apenas o JSON puro):
       documento_status: "Erro Sistema",
       recebedor_nome: "Erro Sistema",
       error_type: error.constructor.name
+    });
+  }
+  } catch (outerError) {
+    // CATCH EXTERNO - QUALQUER ERRO NÃO CAPTURADO
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('❌❌❌ ERRO NO WRAPPER GLOBAL ❌❌❌');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📛 Tipo do erro:', outerError.constructor.name);
+    console.log('📛 Mensagem:', outerError.message);
+    console.log('📛 Stack completo:');
+    console.log(outerError.stack);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    return res.status(500).json({
+      error: `Erro crítico: ${outerError.message}`,
+      resposta: 'ERRO_SISTEMA',
+      tentativas: 0,
+      canhoto_status: "Erro Sistema",
+      assinatura_nome: "Erro Sistema",
+      data_entrega: "Erro",
+      documento_status: "Erro Sistema",
+      recebedor_nome: "Erro Sistema",
+      error_type: outerError.constructor.name,
+      stack: outerError.stack
     });
   }
 }
