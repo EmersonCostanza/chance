@@ -1,6 +1,6 @@
 // API Serverless para análise de entregas com Gemini AI
 // Endpoint: /api/analisar
-// Versão: 1.1
+// Versão: 1.2
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
