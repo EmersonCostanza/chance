@@ -41,7 +41,7 @@ export default async function handler(req, res) {
       model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.1, // Baixa temperatura para respostas precisas
-        maxOutputTokens: 50,
+        maxOutputTokens: 200, // Aumentado para suportar JSON completo
       }
     });
 
@@ -60,41 +60,82 @@ export default async function handler(req, res) {
       }
     };
 
-    // Prompt para análise completa - VERSÃO MELHORADA
-    const prompt = `Você está analisando um comprovante de entrega. VOCÊ DEVE RESPONDER, NÃO FIQUE EM SILÊNCIO.
+    // Prompt para análise completa do recibo de entrega
+    const prompt = `Analise o recibo de entrega da encomenda e responda APENAS com um JSON válido (sem markdown, sem explicações).
 
-INSTRUÇÕES:
-1. Olhe a imagem do comprovante
-2. Procure pela data de entrega escrita na imagem
-3. A data esperada é: ${dataDeBaixa}
+PERGUNTAS:
 
-RESPONDA EXATAMENTE ASSIM (escolha UMA opção):
-- Se a data na imagem for ${dataDeBaixa}: responda "OK"
-- Se não conseguir ler a imagem ou não houver data visível: responda "ERRO_DADOS"
-- Se a data na imagem for diferente de ${dataDeBaixa}: responda "DATA_DIVERGENTE: DD/MM/AAAA" (substitua DD/MM/AAAA pela data que você viu)
+1) É um canhoto de entrega? Se sim, está legível?
+   Respostas possíveis: "Legivel" ou "Sem canhoto"
 
-IMPORTANTE: VOCÊ DEVE RESPONDER UMA DAS OPÇÕES ACIMA. NÃO RETORNE VAZIO.`;
+2) Existe uma assinatura na imagem? Se sim, qual o nome?
+   Respostas possíveis: "nome da assinatura" ou "Ilegivel"
+
+3) Qual é a data da entrega/recebimento (ou qualquer sinônimo de entrega)?
+   Respostas possíveis: "DD/MM/AAAA" (data que está no canhoto)
+
+4) Tem número do documento digitado ou escrito à mão?
+   Respostas possíveis: "ok" ou "sem doc"
+
+5) Qual o nome do recebedor (ou sinônimo de quem recebeu a encomenda)?
+   Respostas possíveis: "Nome do recebedor" ou "Sem nome"
+
+IMPORTANTE: A data esperada pelo sistema é ${dataDeBaixa}. Compare com a data do canhoto.
+
+RESPONDA EXATAMENTE NESTE FORMATO JSON (sem \`\`\`json, apenas o JSON puro):
+{
+  "canhoto_status": "Legivel",
+  "assinatura_nome": "nome ou Ilegivel",
+  "data_entrega": "DD/MM/AAAA",
+  "documento_status": "ok ou sem doc",
+  "recebedor_nome": "nome ou Sem nome"
+}`;
 
     const result = await model.generateContent([prompt, imagePart]);
     const response = await result.response;
     let respostaIA = response.text().trim();
     
+    // Remover marcadores de código se a IA incluir
+    respostaIA = respostaIA.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    
     // GARANTIR QUE NÃO SEJA VAZIO
     if (!respostaIA || respostaIA.length === 0) {
-      console.error('⚠️ IA retornou resposta vazia! Forçando ERRO_DADOS');
-      respostaIA = 'ERRO_DADOS';
+      console.error('⚠️ IA retornou resposta vazia! Forçando JSON de erro');
+      respostaIA = JSON.stringify({
+        canhoto_status: "Sem canhoto",
+        assinatura_nome: "Ilegivel",
+        data_entrega: "Erro",
+        documento_status: "sem doc",
+        recebedor_nome: "Sem nome"
+      });
+    }
+    
+    // Tentar parsear o JSON para validar
+    let dadosAnalisados;
+    try {
+      dadosAnalisados = JSON.parse(respostaIA);
+    } catch (parseError) {
+      console.error('⚠️ Erro ao parsear JSON da IA:', parseError);
+      console.error('Resposta recebida:', respostaIA);
+      dadosAnalisados = {
+        canhoto_status: "Sem canhoto",
+        assinatura_nome: "Ilegivel",
+        data_entrega: "Erro",
+        documento_status: "sem doc",
+        recebedor_nome: "Sem nome",
+        erro_parse: true
+      };
     }
     
     // Log da resposta da IA
     console.log('=== RESPOSTA DA IA ===');
     console.log('Data esperada:', dataDeBaixa);
-    console.log('Resposta bruta:', respostaIA);
-    console.log('Tamanho:', respostaIA.length);
+    console.log('Resposta JSON:', JSON.stringify(dadosAnalisados, null, 2));
     console.log('=====================');
 
     return res.status(200).json({
-      resposta: respostaIA,
-      dataBaixa: dataDeBaixa,
+      analise: dadosAnalisados,
+      dataBaixaSistema: dataDeBaixa,
       timestamp: new Date().toISOString(),
       debug: {
         respostaBruta: respostaIA,
