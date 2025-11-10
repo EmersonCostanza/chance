@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Agente de Auditoria (Chance)
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.4
 // @description  Assistente de auditoria para validação de entregas com IA
 // @author       Emerson Costanza
 // @match        https://chancce.moblink.com.br/chancce_painel/main/redirecionar/13*
@@ -1195,13 +1195,16 @@
             </p>
             <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
                 <div style="font-size: 14px; margin-bottom: 10px;">
-                    ✅ Script carregado: <strong>v1.2</strong>
+                    ✅ Script carregado: <strong>v1.3</strong>
                 </div>
                 <div style="font-size: 14px; margin-bottom: 10px;">
                     ✅ API: <strong>chance-rho.vercel.app</strong>
                 </div>
-                <div style="font-size: 14px;">
+                <div style="font-size: 14px; margin-bottom: 10px;">
                     ✅ Status: <strong id="status-api">Testando...</strong>
+                </div>
+                <div style="font-size: 14px;">
+                    🔍 Seletores: <strong id="status-seletores">Verificando...</strong>
                 </div>
             </div>
             <button id="btnTestarAPI" style="
@@ -1215,6 +1218,17 @@
                 cursor: pointer;
                 margin-right: 10px;
             ">🚀 Testar API</button>
+            <button id="btnTestarSeletores" style="
+                background: #FFA500;
+                color: #000;
+                border: none;
+                padding: 15px 30px;
+                border-radius: 10px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                margin-right: 10px;
+            ">🎯 Testar Seletores</button>
             <button id="btnFecharPopup" style="
                 background: rgba(255,255,255,0.2);
                 color: white;
@@ -1224,7 +1238,7 @@
                 font-size: 16px;
                 font-weight: bold;
                 cursor: pointer;
-            ">❌ Fechar</button>
+            ">✅ Iniciar Agente</button>
         `;
         
         document.body.appendChild(popup);
@@ -1247,12 +1261,43 @@
                     statusEl.style.color = '#FF9900';
                 }
             } catch (error) {
-                statusEl.textContent = '❌ API offline';
+                statusEl.textContent = '❌ API offline: ' + error.message;
                 statusEl.style.color = '#FF0000';
             }
         });
         
-        // Botão fechar
+        // Botão de teste dos seletores
+        document.getElementById('btnTestarSeletores').addEventListener('click', () => {
+            const statusEl = document.getElementById('status-seletores');
+            statusEl.textContent = 'Testando...';
+            statusEl.style.color = '#FFA500';
+            
+            const itens = document.querySelectorAll(SELETORES.CONTAINER_ITEM);
+            console.log('[Teste] Itens encontrados:', itens.length);
+            
+            if (itens.length > 0) {
+                const primeiroItem = itens[0];
+                const data = primeiroItem.querySelector(SELETORES.DATA_BAIXA);
+                const imagem = primeiroItem.querySelector(SELETORES.IMAGEM_CANHOTO);
+                
+                console.log('[Teste] Primeiro item:', primeiroItem);
+                console.log('[Teste] Data encontrada:', data);
+                console.log('[Teste] Imagem encontrada:', imagem);
+                
+                if (data && imagem) {
+                    statusEl.textContent = `✅ ${itens.length} itens OK!`;
+                    statusEl.style.color = '#00FF00';
+                } else {
+                    statusEl.textContent = `⚠️ ${itens.length} itens, mas seletores incorretos`;
+                    statusEl.style.color = '#FF9900';
+                }
+            } else {
+                statusEl.textContent = '❌ Nenhum item encontrado!';
+                statusEl.style.color = '#FF0000';
+            }
+        });
+        
+        // Botão fechar - agora inicia o agente
         document.getElementById('btnFecharPopup').addEventListener('click', () => {
             popup.remove();
             // Criar interface normal após fechar
@@ -1260,6 +1305,12 @@
         });
         
         console.log('[Chance Agente] 🎯 Popup de teste criado e exibido');
+        
+        // Auto-testar API ao carregar
+        setTimeout(() => {
+            document.getElementById('btnTestarAPI').click();
+            document.getElementById('btnTestarSeletores').click();
+        }, 500);
     }
 
     // ========== INICIALIZAÇÃO ==========
