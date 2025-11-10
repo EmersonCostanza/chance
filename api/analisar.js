@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 
   try {
     // 1. Validar dados de entrada
-    const { dataDeBaixa, imagemBase64, prompt } = req.body;
+    const { dataDeBaixa, imagemBase64, prompt, mimeType } = req.body;
     
     if (!dataDeBaixa || !imagemBase64) {
       return res.status(400).json({
@@ -56,10 +56,13 @@ export default async function handler(req, res) {
       });
     }
     
+    // Usar MIME type fornecido ou detectar
+    const imageMimeType = mimeType || 'image/jpeg';
+    
     const imagePart = {
       inlineData: {
         data: base64Data,
-        mimeType: 'image/jpeg'
+        mimeType: imageMimeType
       }
     };
     

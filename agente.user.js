@@ -517,39 +517,69 @@
             // Importante: permite enviar cookies/credenciais da página
             anonymous: false,
             onload: function(response) {
+                const contentType = response.responseHeaders.match(/content-type:\s*([^\r\n]+)/i)?.[1] || 'image/jpeg';
+                
                 console.log('[Agente] Resposta recebida:', {
                     status: response.status,
-                    contentType: response.responseHeaders.match(/content-type:\s*([^\r\n]+)/i)?.[1],
-                    size: response.response?.size
+                    contentType: contentType,
+                    size: response.response?.size,
+                    sizeKB: (response.response?.size / 1024).toFixed(2) + ' KB'
                 });
                 
                 if (response.status !== 200) {
                     console.error('[Agente] ❌ Status HTTP inválido:', response.status);
-                    callback(null);
+                    callback(null, null);
                     return;
                 }
                 
                 if (!response.response || response.response.size === 0) {
                     console.error('[Agente] ❌ Resposta vazia ou inválida');
-                    callback(null);
+                    callback(null, null);
                     return;
                 }
                 
+                // Detectar MIME type correto
+                let mimeType = contentType;
+                if (contentType.includes('image/')) {
+                    mimeType = contentType.split(';')[0].trim();
+                } else {
+                    // Fallback: tentar detectar pela URL
+                    if (url.toLowerCase().includes('.png')) {
+                        mimeType = 'image/png';
+                    } else if (url.toLowerCase().includes('.jpg') || url.toLowerCase().includes('.jpeg')) {
+                        mimeType = 'image/jpeg';
+                    } else if (url.toLowerCase().includes('.gif')) {
+                        mimeType = 'image/gif';
+                    } else {
+                        mimeType = 'image/jpeg'; // Default
+                    }
+                }
+                
+                console.log('[Agente] MIME type detectado:', mimeType);
+                
                 const reader = new FileReader();
                 reader.onloadend = function() {
-                    const base64 = reader.result.split(',')[1]; // Remove "data:image/...;base64,"
-                    console.log('[Agente] ✅ Imagem convertida (' + base64.length + ' chars)');
-                    callback(base64);
+                    const dataUrl = reader.result;
+                    const base64 = dataUrl.split(',')[1]; // Remove "data:image/...;base64,"
+                    
+                    console.log('[Agente] ✅ Imagem convertida:', {
+                        mimeType: mimeType,
+                        base64Length: base64.length,
+                        base64KB: (base64.length / 1024).toFixed(2) + ' KB',
+                        primeiros30chars: base64.substring(0, 30)
+                    });
+                    
+                    callback(base64, mimeType);
                 };
                 reader.onerror = function(error) {
                     console.error('[Agente] ❌ Erro no FileReader:', error);
-                    callback(null);
+                    callback(null, null);
                 };
                 reader.readAsDataURL(response.response);
             },
             onerror: function(error) {
                 console.error('[Agente] ❌ Erro ao carregar imagem:', error);
-                callback(null);
+                callback(null, null);
             }
         });
     }
@@ -610,7 +640,7 @@
             });
             
             // Converter imagem e enviar para API
-            converterImagemParaBase64(urlImagem, function(imagemBase64) {
+            converterImagemParaBase64(urlImagem, function(imagemBase64, mimeType) {
                 if (!imagemBase64) {
                     // Erro na conversão
                     badge.className = 'badge-status-ia erro';
@@ -622,6 +652,7 @@
                     return;
                 }
                 
+                console.log(`[Agente] Item ${index + 1}: Enviando para API com MIME type:`, mimeType);
                 badge.querySelector('.badge-json').textContent = 'Enviando para Gemini...';
                 
                 // Chamar API de análise
@@ -634,6 +665,7 @@
                     data: JSON.stringify({
                         dataDeBaixa: dataDeBaixa,
                         imagemBase64: imagemBase64,
+                        mimeType: mimeType, // ← Novo campo
                         prompt: promptPersonalizado
                     }),
                     onload: function(response) {
