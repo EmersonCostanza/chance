@@ -53,31 +53,37 @@ export default async function handler(req, res) {
       }
     };
 
-    // Prompt para análise completa
-    const prompt = `Você é um auditor de entregas. Analise esta imagem de canhoto/comprovante de entrega.
+    // Prompt para análise completa - ULTRA SIMPLIFICADO
+    const prompt = `Olhe esta imagem de comprovante de entrega.
 
-INSTRUÇÕES CRÍTICAS:
-1. Olhe para a imagem e identifique se há uma DATA DE ENTREGA escrita (pode estar manuscrita ou impressa)
-2. Compare essa data com a data do sistema: ${dataDeBaixa}
-3. Responda SOMENTE com um dos códigos abaixo
+Data esperada: ${dataDeBaixa}
 
-CÓDIGOS VÁLIDOS (responda EXATAMENTE como está escrito):
-- OK (se a imagem está legível, tem assinatura, e a data é ${dataDeBaixa})
-- ERRO_DADOS (se a imagem está em branco, borrada ou sem dados legíveis)
-- ERRO_IMAGEM (se a imagem está completamente ilegível ou não carregou)
-- DATA_DIVERGENTE: DD/MM/AAAA (se você encontrou uma data DIFERENTE de ${dataDeBaixa} - substitua DD/MM/AAAA pela data que você viu)
+Encontre a data de entrega na imagem e responda APENAS:
+- Se a data na imagem é ${dataDeBaixa}, responda: OK
+- Se você não consegue ler nada na imagem, responda: ERRO_DADOS  
+- Se a data na imagem é diferente de ${dataDeBaixa}, responda: DATA_DIVERGENTE: [coloque aqui a data que você viu no formato DD/MM/AAAA]
 
-ATENÇÃO: Responda APENAS um dos códigos acima. Nada mais.`;
-
+Responda SOMENTE o código. Uma palavra apenas (ou DATA_DIVERGENTE: seguido da data).`;
 
     const result = await model.generateContent([prompt, imagePart]);
     const response = await result.response;
     const respostaIA = response.text().trim();
+    
+    // Log da resposta da IA
+    console.log('=== RESPOSTA DA IA ===');
+    console.log('Data esperada:', dataDeBaixa);
+    console.log('Resposta bruta:', respostaIA);
+    console.log('Tamanho:', respostaIA.length);
+    console.log('=====================');
 
     return res.status(200).json({
       resposta: respostaIA,
       dataBaixa: dataDeBaixa,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      debug: {
+        respostaBruta: respostaIA,
+        tamanho: respostaIA.length
+      }
     });
 
   } catch (error) {

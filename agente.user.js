@@ -525,15 +525,46 @@
         item.classList.remove('auditoria-processando');
         
         const modoAutomatico = GM_getValue('gravarAuto', false);
-        const partes = respostaIA.split(':');
-        const codigo = partes[0].trim();
-        const valor = partes[1] ? partes[1].trim() : '';
         
-        console.log('[Chance Agente] 🎯 Executando ação:', {
-            codigo: codigo,
-            valor: valor,
-            modoAutomatico: modoAutomatico
-        });
+        // Normalizar resposta da IA (remover quebras de linha, espaços extras, etc)
+        const respostaNormalizada = respostaIA.replace(/\n/g, ' ').trim().toUpperCase();
+        
+        console.log('[Chance Agente] 🎯 Resposta original:', respostaIA);
+        console.log('[Chance Agente] 🎯 Resposta normalizada:', respostaNormalizada);
+        
+        // Tentar identificar o código da resposta
+        let codigo = '';
+        let valor = '';
+        
+        if (respostaNormalizada.includes('DATA_DIVERGENTE') || respostaNormalizada.includes('DATA DIVERGENTE')) {
+            codigo = 'DATA_DIVERGENTE';
+            // Extrair a data da resposta
+            const matchData = respostaNormalizada.match(/(\d{2}\/\d{2}\/\d{4})/);
+            if (matchData) {
+                valor = matchData[1];
+            }
+        } else if (respostaNormalizada === 'OK' || respostaNormalizada.startsWith('OK')) {
+            codigo = 'OK';
+        } else if (respostaNormalizada.includes('ERRO_DADOS') || respostaNormalizada.includes('ERRO DADOS')) {
+            codigo = 'ERRO_DADOS';
+        } else if (respostaNormalizada.includes('ERRO_IMAGEM') || respostaNormalizada.includes('ERRO IMAGEM')) {
+            codigo = 'ERRO_IMAGEM';
+        } else {
+            // Se não conseguiu identificar, usar a primeira palavra
+            const partes = respostaNormalizada.split(/[\s:]/);
+            codigo = partes[0] || respostaNormalizada;
+            
+            // Tentar extrair data de qualquer lugar
+            const matchData = respostaNormalizada.match(/(\d{2}\/\d{2}\/\d{4})/);
+            if (matchData) {
+                valor = matchData[1];
+                codigo = 'DATA_DIVERGENTE';
+            }
+        }
+        
+        console.log('[Chance Agente] 🎯 Código identificado:', codigo);
+        console.log('[Chance Agente] 🎯 Valor extraído:', valor);
+        console.log('[Chance Agente] 🎯 Modo automático:', modoAutomatico);
         
         // Armazenar resultado da auditoria
         const resultado = {
