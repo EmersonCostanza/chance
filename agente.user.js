@@ -241,10 +241,17 @@
     }
 
     function converterImagemParaBase64(url, callback) {
+        console.log('[Chance Agente] 🖼️ Tentando carregar imagem:', url);
+        
         const img = new Image();
         img.crossOrigin = 'anonymous';
         
         img.onload = function() {
+            console.log('[Chance Agente] ✅ Imagem carregada com sucesso:', {
+                width: img.width,
+                height: img.height
+            });
+            
             const canvas = document.createElement('canvas');
             canvas.width = img.width;
             canvas.height = img.height;
@@ -253,11 +260,13 @@
             ctx.drawImage(img, 0, 0);
             
             const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+            console.log('[Chance Agente] ✅ Imagem convertida para Base64. Tamanho:', dataURL.length);
             callback(dataURL);
         };
         
-        img.onerror = function() {
-            console.error('Erro ao carregar imagem:', url);
+        img.onerror = function(error) {
+            console.error('[Chance Agente] ❌ Erro ao carregar imagem:', url);
+            console.error('[Chance Agente] ❌ Detalhes do erro:', error);
             callback(null);
         };
         
@@ -366,15 +375,38 @@
                 imagemBase64: imagemBase64
             }),
             onload: function(response) {
+                console.log('[Chance Agente] 📨 Status da resposta:', response.status);
+                console.log('[Chance Agente] 📨 Response completo:', response);
+                console.log('[Chance Agente] 📄 Response text:', response.responseText);
+                console.log('[Chance Agente] 📄 Response text length:', response.responseText.length);
+                
                 try {
+                    if (!response.responseText || response.responseText.trim() === '') {
+                        throw new Error('Resposta vazia da API');
+                    }
+                    
                     const resultado = JSON.parse(response.responseText);
                     console.log('[Chance Agente] 📥 Resposta da IA:', resultado.resposta);
                     console.log('[Chance Agente] 🔍 Análise completa:', resultado);
                     executarAcao(item, resultado.resposta);
                 } catch (error) {
                     console.error('[Chance Agente] ❌ Erro ao processar resposta:', error);
+                    console.error('[Chance Agente] 📄 Conteúdo da resposta que falhou:', response.responseText);
                     item.classList.remove('auditoria-processando');
                     item.classList.add('auditoria-item-erro');
+                    
+                    // Criar badge de erro de API
+                    const diagnostico = document.createElement('div');
+                    diagnostico.className = 'diagnostico-ia erro';
+                    diagnostico.style.cssText = 'position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important; display: block !important;';
+                    diagnostico.innerHTML = `
+                        <div class="titulo">❌ Erro na API</div>
+                        <div class="detalhes">Falha ao comunicar com servidor: ${error.message}</div>
+                    `;
+                    if (window.getComputedStyle(item).position === 'static') {
+                        item.style.position = 'relative';
+                    }
+                    item.appendChild(diagnostico);
                 }
                 finalizarItem();
             },
