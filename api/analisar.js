@@ -313,7 +313,11 @@ RESPONDA EXATAMENTE NESTE FORMATO JSON (sem \`\`\`json, apenas o JSON puro):
     console.log('📊 Resultado final:', JSON.stringify(dadosAnalisados, null, 2));
     console.log('========================================');
 
-    return res.status(200).json(dadosAnalisados);
+    return res.status(200).json({
+      status: 'success',
+      data: dadosAnalisados,
+      tentativas: tentativa
+    });
     
   } catch (error) {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
