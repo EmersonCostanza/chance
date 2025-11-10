@@ -217,18 +217,19 @@
         
         /* Badge de diagnóstico da IA - CHECKLIST INDIVIDUAL */
         .diagnostico-ia {
-            position: absolute !important;
+            position: fixed !important;
             top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
+            left: 0 !important;
+            transform: translateY(-50%) !important;
             background: white !important;
             color: #333 !important;
             padding: 15px !important;
-            border-radius: 10px !important;
+            border-radius: 0 10px 10px 0 !important;
             font-weight: normal !important;
             font-size: 13px !important;
             box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
             border: 3px solid !important;
+            border-left: none !important;
             z-index: 1000001 !important;
             min-width: 300px !important;
             max-width: 350px !important;
