@@ -301,10 +301,12 @@
         item.classList.remove('auditoria-processando');
         
         const modoAutomatico = GM_getValue('gravarAuto', false);
-        const [codigo, valor] = respostaIA.split(':').map(s => s.trim());
+        const partes = respostaIA.split(':');
+        const codigo = partes[0].trim();
+        const valor = partes[1] ? partes[1].trim() : '';
         
         switch(codigo) {
-            case 'OK':
+            case 'OK': {
                 // Tudo certo - adiciona feedback visual
                 item.classList.add('auditoria-item-ok');
                 const feedback = document.createElement('div');
@@ -313,9 +315,10 @@
                 item.style.position = 'relative';
                 item.appendChild(feedback);
                 break;
+            }
                 
             case 'ERRO_DADOS':
-            case 'ERRO_IMAGEM':
+            case 'ERRO_IMAGEM': {
                 // Marcar checkbox de campo em branco/ilegível
                 item.classList.add('auditoria-item-erro');
                 const checkboxErro = item.querySelector(
@@ -325,8 +328,9 @@
                     checkboxErro.click();
                 }
                 break;
+            }
                 
-            case 'DATA_DIVERGENTE':
+            case 'DATA_DIVERGENTE': {
                 // Marcar data divergente e preencher calendário
                 item.classList.add('auditoria-item-erro');
                 const checkboxData = item.querySelector(SELETORES.CHECKBOX_DATA_DIVERGENTE);
@@ -345,6 +349,7 @@
                     }
                 }
                 break;
+            }
         }
     }
 
