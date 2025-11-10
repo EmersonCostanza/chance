@@ -130,6 +130,8 @@
 
     // ========== CRIAR INTERFACE ==========
     function criarInterface() {
+        console.log('[Chance Agente] Criando interface...');
+        
         const painel = document.createElement('div');
         painel.id = 'painel-agente';
         painel.innerHTML = `
@@ -149,10 +151,15 @@
                 </label>
             </div>
             
+            <button id="btnIniciarManual" style="width: 100%; padding: 10px; margin-top: 10px; background: #00FF00; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                ▶ Iniciar Análise
+            </button>
+            
             <div id="status-agente">Aguardando...</div>
         `;
         
         document.body.appendChild(painel);
+        console.log('[Chance Agente] Painel adicionado ao body');
         
         // Restaurar estado dos toggles
         document.getElementById('chkAnalisarTudo').checked = GM_getValue('analisarTudo', false);
@@ -167,6 +174,12 @@
         document.getElementById('chkAnalisarGravarAuto').addEventListener('change', (e) => {
             GM_setValue('gravarAuto', e.target.checked);
             atualizarStatus('✓ Configuração salva');
+        });
+        
+        // Botão manual
+        document.getElementById('btnIniciarManual').addEventListener('click', () => {
+            console.log('[Chance Agente] Botão manual clicado');
+            iniciarAuditoria();
         });
     }
 
@@ -415,11 +428,15 @@
     }
 
     // ========== INICIALIZAÇÃO ==========
+    console.log('[Chance Agente] Script carregado!');
+    
     window.addEventListener('load', () => {
+        console.log('[Chance Agente] Página carregada, criando interface...');
         criarInterface();
         
         // Se modo automático estiver ativado, iniciar auditoria
         if (GM_getValue('analisarTudo', false)) {
+            console.log('[Chance Agente] Modo automático ativo, iniciando análise...');
             setTimeout(() => iniciarAuditoria(), 2000);
         }
     });
